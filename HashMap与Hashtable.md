@@ -93,7 +93,7 @@ static final int tableSizeFor(int cap) {
 
 HashMap的数据插入原理：
 
-![HashMap初始化](HashMap初始化.png)
+![HashMap初始化](/image/HashMap初始化.png)
 
 1. 判断数组是否为空，为空进行初始化;
 2. 不为空，计算 key 的 hash 值，通过(n - 1) & hash计算应当存放在数组中的下标 index;
@@ -424,7 +424,7 @@ ConcurrentHashMap的数据结构是由一个Segment数组和多个HashEntry组�
 
 ConcurrentHashMap定位一个元素的过程需要进行两次Hash操作，第一次Hash定位到Segment，第二次Hash定位到元素所在的链表的头部，因此，这一种结构的带来的副作用是Hash的过程要比普通的HashMap要长，但是带来的好处是写操作的时候可以只对元素所在的Segment进行加锁即可，不会影响到其他的Segment，这样，在最理想的情况下，ConcurrentHashMap可以最高同时支持Segment数量大小的写操作（刚好这些写操作都非常平均地分布在所有的Segment上），所以，通过这一种结构，ConcurrentHashMap的并发能力可以大大的提高
 
-![jdk7CHM](jdk7CHM.png)
+![jdk7CHM](/image/jdk7CHM.png)
 
 **初始化**: Segment的大小取值都是以2的N次方，无关concurrencyLevel的取值，当然concurrencyLevel最大只能用16位的二进制来表示，即65536，换句话说，Segment的大小最多65536个，没有指定concurrencyLevel元素初始化，Segment的大小size默认为16。
 

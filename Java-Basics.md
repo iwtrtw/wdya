@@ -546,7 +546,7 @@ private static Class<?> getProxyClass0(ClassLoader loader,
         proxyClassCache = new WeakCache<>(new KeyFactory(), new ProxyClassFactory());
 ```
 
-![WeakCache](WeakCache.webp)
+![WeakCache](/image/WeakCache.webp)
 
 WeakCache缓存的数据结构是双重map(key,sub-key)->(value)。这个结构和Redis里面的hash结构很类似，根据一级的键（key）、二级的键（sub-key）为索引，去检索出值（value）。对应到WeakCache类代码里面，就是一个ConcurrentMap实例map，这个map的key就是一级键，map的value又是个ConcurrentMap实例，这个子map的key是二级键，子map的value就是缓存的的值。
 
@@ -928,7 +928,7 @@ private byte[] generateClassFile() {
 
 
 
-![getProxyClass0](getProxyClass0.webp)
+![getProxyClass0](/image/getProxyClass0.webp)
 
 当代理对象生成后，最后由InvocationHandler的invoke()方法调用目标方法，在动态代理中InvocationHandler是核心，每个代理实例都具有一个关联的InvocationHandler;对代理实例调用方法时，将对方法调用进行编码并将其指派到它的InvocationHandler的invoke()方法。所以对代理方法的调用都是通InvocationHadler的invoke来实现中，而invoke方法根据传入的代理对象，方法和参数来决定调用代理的哪个方法。
 

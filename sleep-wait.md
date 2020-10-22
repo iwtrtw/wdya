@@ -163,7 +163,7 @@ public class Object {
 
 #### java线程
 
-![java-thread-state](java-thread-state.jpeg)
+![java-thread-state](/image/java-thread-state.jpeg)
 
 + 初始状态(NEW)：实现Runnable接口和继承Thread可以得到一个线程类，new一个实例出来，线程就进入了初始状态，还没有调用start()方法
 + 就绪/运行中状态(RUNNABLE—READY、RUNNING)：线程对象创建后，其他线程(比如main线程）调用了该对象的start()方法。该状态的线程位于可运行线程池中，等待被线程调度选中，获取CPU的使用权，此时处于就绪状态（ready）。就绪状态的线程在获得CPU时间片后变为运行中状态（running）
@@ -192,4 +192,4 @@ public enum State {
 }
 ```
 
-![java-thread](java-thread.jpg)
+![java-thread](/image/java-thread.jpg)
