@@ -6,7 +6,7 @@ https://tech.meituan.com/2018/11/15/java-lock.html
 
 + 修饰静态方法，加锁的对象是当前类对象，想要进入同步代码必须先获取当前类的锁
 + 修饰实例方法，加锁的对象是当前实例，想要进入同步代码块之前必须先获取当前对象的锁
-+ 修饰代码块，指定加锁对象，对给定的对象加锁，进入同步代码块之前必须先获得当前对象的锁
++ 修饰代码块，指定加锁对象，对给定的对象加锁，进入同步代码块之前必须先获得给定对象的锁
 
 ​      synchronized是基于进入和退出montior对象来实现，包括显示同步(synchronized修饰同步代码块时，同步代码块的字节码反编译之后会有明确的monitorenter和monitoexit指令)，还有隐式同步(synchronized修饰方法，同步方法的字节码反编译之后会有个标志位ACC_SYNCHRONIZED,线程在执行方法前会先去获取对象的monitor对象，如果获取成功则执行方法代码，执行完毕后释放monitor对象，如果monitor对象已经被其它线程获取，那么当前线程被阻塞)
 
@@ -101,4 +101,4 @@ ObjectMonitor中有两个队列，_WaitSet 和 _EntryList，用来保存ObjectWa
 3. 当同步代码块中正运行running的线程调用 wait() 方法时，将释放当前持有的monitor，owner变量恢复为null，count自减1，同时该线程进入 WaitSet集合中等待被唤醒。
 4. 若当前线程执行完毕也将释放monitor(锁)并复位变量的值，以便其他线程进入获取monitor(锁)
 
-monitor的本质是依赖于底层操作系统的Mutex Lock实 现，操作系统实现线程之间的切换需要从用户态到内核态的切换，切换成本非常高。
+monitor的本质是依赖于底层操作系统的Mutex Lock实现，操作系统实现线程之间的切换需要从用户态到内核态的切换，切换成本非常高。

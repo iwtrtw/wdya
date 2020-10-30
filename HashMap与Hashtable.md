@@ -89,8 +89,6 @@ static final int tableSizeFor(int cap) {
     }
 ```
 
-
-
 HashMap的数据插入原理：
 
 ![HashMap初始化](/image/HashMap初始化.png)
@@ -582,7 +580,7 @@ final V putVal(K key, V value, boolean onlyIfAbsent) {
             
              // 找该 hash 值对应的数组下标，得到第一个节点 f
             else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
-                // 如果数组该位置为空，用一次 CAS 操作将这个新值放入其中即可，如果 CAS 失败，那就是有并发操作，进到下一个循环就好了
+                // 如果数组该位置为空，用一次CAS操作将这个新值放入其中即可，如果 CAS 失败，那就是有并发操作，进到下一个循环就好了
                 /*casTable()方法的第一个参数是Node数组的引用，第二个参数是待操作的下标，第三个参数是期望值，第四个参数是待操作的Node节点，实现的是将Node数组下标为参数二的节点替换成参数四的节点，如果期望值和实际值不符返回false，否则参数四的节点成功替换上去，返回ture，即插入成功。注意这里：如果插入成功了则跳出for循环，插入失败的话(其他线程抢先插入了)，那么会执行到下面的代码。
                 */
                 if (casTabAt(tab, i, null,
