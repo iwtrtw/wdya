@@ -662,7 +662,7 @@ public class Director {
 
 ##### 应用场景
 
-+ StringBuilder和StringBuffer的append()方法使用了建造者模式。StringBuilder把构建者的角色交给了其的父类AbstractStringBuilder。ppend方法相当于建造者模式中建造者的对象组合方法，把boolean, char, int, long, float, double, String, char[], CharSequence, String, StringBuilder, StringBuffer, Object等对象组合成程序员需要的字符串。最关键也是常用的方法是public StringBuilder append(String str)，其他许多不同类型的append方法实际是引用了字符串的append方法。该方法的具体实现在StringBuilder的基类AbstractStringBuilder中。
++ StringBuilder和StringBuffer的append()方法使用了建造者模式。StringBuilder把构建者的角色交给了其的父类AbstractStringBuilder。append方法相当于建造者模式中建造者的对象组合方法，把boolean, char, int, long, float, double, String, char[], CharSequence, String, StringBuilder, StringBuffer, Object等对象组合成程序员需要的字符串。最关键也是常用的方法是public StringBuilder append(String str)，其他许多不同类型的append方法实际是引用了字符串的append方法。该方法的具体实现在StringBuilder的基类AbstractStringBuilder中。
 
   将产品（String）与建造过程（StringBuider）分离
 
