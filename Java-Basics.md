@@ -118,7 +118,11 @@ IOException
 2. 抛出自定义异常：在方法中通过throw关键字抛出异常对象。
 3. 捕获自定义异常：如果在当前抛出异常的方法中处理异常，可以使用try-catch语句捕获并处理；否则在方法的声明处通过throws关键字指明要抛出给方法调用者的异常，继续进行下一步操作。
 
-##### File
+##### 泛型-TODO
+
+##### 注解-TODO
+
+##### File-TODO
 
 ##### instanceof
 
@@ -141,6 +145,15 @@ IOException
 ##### static
 
 ​		static方便在没有创建对象的情况下来进行调用（方法/变量），被static关键字修饰的方法或者变量不需要依赖于对象来进行访问，只要类被加载了，就可以通过类名去进行访问。静态变量被所有的对象所共享，在内存中只有一个副本，它当且仅当在类初次加载时会被初始化。在类初次被加载的时候，会按照static块的顺序来执行每个static块，并且只会执行一次。
+
+##### transient
+
+一个类只要实现了Serilizable接口，这个类就可以被序列化，它的所有属性和方法都会自动序列化。然而在实际开发过程中，类的有些属性需要序列化，而其他属性不需要被序列化，如果一个用户有一些敏感信息（如密码，银行卡号等），为了安全起见，不希望在网络操作（主要涉及到序列化操作，本地序列化缓存也适用）中被传输，这些信息对应的变量就可以加上transient关键字。换句话说，这个字段的生命周期仅存于调用者的内存中而不会写到磁盘里持久化。java 的transient关键字为我们提供了便利，你只需要实现Serilizable接口，将不需要序列化的属性前添加关键字transient，序列化对象的时候，这个属性就不会序列化到指定的目的地中。
+
+##### try-with-resources
+
+在try( …)⾥声明的资源，会在try-catch代码块结束后⾃动关闭掉，实现了AutoCloseable接⼝的类，在try()⾥声明该类实例的时候，try结束后⾃动调⽤的close⽅法，这个动作会早于finally⾥调⽤的⽅法；
+不管是否出现异常，try()⾥的实例都会被调⽤close⽅法；try⾥⾯可以声明多个⾃动关闭的对象，越早声明的对象，会越晚被close掉
 
 ##### String/StringBuffer/StringBuilder
 
@@ -203,6 +216,12 @@ StringBuffer 类内部维护可变长度char[]， 基本上与StringBuilder一�
 | newInstance(Object... initargs) | 根据传递的参数创建类的对象 |
 
 ##### JDK/CGLib动态代理
+
+> 静态代理实现较简单，代理类在编译期生成，效率高。缺点是会生成大量的代理类。
+>
+> JDK动态代理不要求代理类和委托类实现同一个接口，但是委托类需要实现接口，代理类需要实现InvocationHandler接口。
+>
+> 动态代理要求代理类InvocationHandler接口，通过反射代理方法，比较消耗系统性能，但可以减少代理类的数量，使用更灵活。
 
 + 区别
 
@@ -998,9 +1017,16 @@ CGLIB在类生成期间的操作会相对耗时，而且生成的类数目比较
 
 #### I/O
 
-##### BIO
+##### Stream流
 
-##### NIO
+数据流又分为输入流和输出流；输入输出流又分为字节流和字符流
+
++ 字节流：以字节为基本单位 , 在 java.io包中，大部分操作继承InputStream（输入字节流）类和OutputStream（输出字节流）类
++ 字符流：两个字节为基本单位，专门处理字符串和文本，对于字符流进行操作的类主要是Reader（读取流）类和 Writer（写入流）类。
+
+##### BIO-TODO
+
+##### NIO-TODO
 
 #### 集合
 
@@ -1046,7 +1072,15 @@ public interface SortedSet<E> extends Set<E>
 
 ##### List
 
-+ ArrayList：ArrayList底层采用数组实现，拥有快速随机访问能力，是非线程安全的集合。ArrayList默认容量为10，扩容规则为当要保存的新元素所需的容量不足时触发，基本规则为扩容1.5倍。如果在遍历的时候发生结构性变化，会触发ConcurrentModificationException异常。结构性变化包括：添加新元素，删除元素。ArrayList支持序列化功能，支持克隆（浅拷贝）功能，排序功能等
+> - 允许重复的元素（但当出现重复元素的时候，操作的时候也要小心。当修改重复元素时，所有的重复的元素都会受影响）
+> - 允许null值。至少ArrayList和LinkedList都允许有null值，并且null也是可以重复的，添加多个null，list的长度也会增加
+> - 删除操作时，如果是根据对象删除的话，会删除第一个出现的元素。（这样如果数组内有多个重复元素的时候也不会混淆）
+
+###### ArrayList
+
+ArrayList底层采用数组实现，拥有快速随机访问能力，是非线程安全的集合。ArrayList默认容量为10，扩容规则为当要保存的新元素所需的容量不足时触发，基本规则为扩容1.5倍。如果在遍历的时候发生结构性变化，导致modcount改变，会触发ConcurrentModificationException异常。结构性变化包括：添加新元素，删除元素。ArrayList支持序列化功能，支持克隆（浅拷贝）功能，排序功能等。ArrayList比较适合顺序添加、随机访问的场景。
+
+可变长度数组的原理：当元素个数超过数组的长度时，会产生一个新的数组，将原数组的数据复制到新数组，再将新的元素添加到新数组中。
 
 ```java
 public abstract class AbstractList<E> extends AbstractCollection<E> implements List<E>
@@ -1055,10 +1089,228 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
 ```java
 public class ArrayList<E> 
     extends AbstractList<E>
-    implements List<E>, RandomAccess, Cloneable, java.io.Serializable
+    implements List<E>, RandomAccess, Cloneable, java.io.Serializable{
+    //数组最大容量 2的31次方-9 ，但也可能是Integer.MAX_VALUE
+    //public static final int   MAX_VALUE = 0x7fffffff; 2的31次方减一
+    //public static final int   MIN_VALUE = 0x80000000; 2的31次方
+    private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
+    
+    //默认初始容量
+    private static final int DEFAULT_CAPACITY = 10;
+}
 ```
 
-+ LinkedList：LinkedList的本质是双向链表；顺序访问会非常高效，而随机访问效率比较低。
++ add(E e)：直接在元素尾部添加元素，如果没有扩容，时间复杂度为O(1) 
+
+```java
+public boolean add(E e) {
+        ensureCapacityInternal(size + 1);  // Increments modCount!!
+        elementData[size++] = e;
+        return true;
+    }
+```
+
++ add(int index, E element)：插入元素，在指定位置index添加元素，首先判断位置index是否越界合法，然后检测是否需要扩容，最后使用System.arraycopy方法来完成数组的复制。真正耗时的操作是 System.arraycopy (elementData, index, elementData, index + 1, size - index)，会移动index之后所有元素
+
+```java
+public void add(int index, E element) {
+    	//检查index否合法(0<=index <=size)
+        rangeCheckForAdd(index);
+    	//判断是否需要扩容
+        ensureCapacityInternal(size + 1);  // Increments modCount!!
+        System.arraycopy(elementData, index, elementData, index + 1,
+                         size - index);
+        elementData[index] = element;
+        size++;
+}
+```
+
+```java
+//将源数组src从srcPos位置开始复制到dest数组中，复制长度为length，数据从dest的destPos位置开始
+public static native void arraycopy(Object src,  int  srcPos,
+                                        Object dest, int destPos,
+                                        int length);
+```
+
++ ensureCapacityInternal：初始化与扩容
+
+```java
+private void ensureCapacityInternal(int minCapacity) {
+        ensureExplicitCapacity(calculateCapacity(elementData, minCapacity));
+    }
+```
+
+calculateCapacity：如果数组还是初始数组，那么最小的扩容大小就是size+1和初始容量中较大的一个，初始容量为10
+
+```java
+private static int calculateCapacity(Object[] elementData, int minCapacity) {
+        if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
+            return Math.max(DEFAULT_CAPACITY, minCapacity);
+        }
+        return minCapacity;
+    }
+```
+
+ensureExplicitCapacity：开始精确地扩容，如果此时扩容容量大于数组长度吗，执行grow，否则不执行。
+
+```java
+private void ensureExplicitCapacity(int minCapacity) {
+        modCount++;
+       // 如果在创建arraylist时指定初始化容量大小，即 elementData.length为指定的数组大小
+        if (minCapacity - elementData.length > 0)
+            grow(minCapacity);
+    }
+```
+
+grow()：扩容为原来的1.5倍
+
+```java
+private void grow(int minCapacity) {
+        // overflow-conscious code
+        int oldCapacity = elementData.length;
+        //新容量为原来的1.5倍
+        int newCapacity = oldCapacity + (oldCapacity >> 1);
+        if (newCapacity - minCapacity < 0)
+            //首次扩容时newCapacity=0,minCapacity=10，则将10作为初始容量
+            newCapacity = minCapacity;
+        if (newCapacity - MAX_ARRAY_SIZE > 0)
+            newCapacity = hugeCapacity(minCapacity);
+        // minCapacity is usually close to size, so this is a win:
+        elementData = Arrays.copyOf(elementData, newCapacity);
+ }
+```
+
+hugeCapacity()：当新容量大于最大数组长度，有两种情况，一种是溢出，抛异常，一种是没溢出，返回整数的最大值。若扩容前的容量+1大于数组的最大容量时，返回的是整数最大值
+
+```java
+private static int hugeCapacity(int minCapacity) {
+        if (minCapacity < 0) // overflow
+            throw new OutOfMemoryError();
+        return (minCapacity > MAX_ARRAY_SIZE) ?
+            Integer.MAX_VALUE :
+            MAX_ARRAY_SIZE;
+}
+```
+
++ remove(int index)：删除指定位置的元素，判断索引是否和法，删除的方式是把被删除元素右边的元素左移，方法同样是使用System.arraycopy进行拷贝。
+
+```java
+public E remove(int index) {
+        rangeCheck(index);
+
+        modCount++;
+        E oldValue = elementData(index);
+
+        int numMoved = size - index - 1;
+        if (numMoved > 0)
+            System.arraycopy(elementData, index+1, elementData, index,
+                             numMoved);
+        elementData[--size] = null; // clear to let GC do its work
+    	//返回被删除元素的值
+        return oldValue;
+    }
+```
+
++ remove(Object)：移除某个元素，如果要移除的对象为空，则找到elementData中第一次出现空对象的位置，如果有，则返回true，否则返回false；如果要移除的对象不是空，那么则可以直接调用equals方法进行比较。
+
+```java
+public boolean remove(Object o) {
+        if (o == null) {
+            for (int index = 0; index < size; index++)
+                if (elementData[index] == null) {
+                    fastRemove(index);
+                    return true;
+                }
+        } else {
+            for (int index = 0; index < size; index++)
+                if (o.equals(elementData[index])) {
+                    fastRemove(index);
+                    return true;
+                }
+        }
+        return false;
+    }
+```
+
++ clear()：清空数组，将所有元素置为null，这样就可以让GC自动回收掉没有被引用的元素了。
+
+```java
+public void clear() {
+        modCount++;
+
+        // clear to let GC do its work
+        for (int i = 0; i < size; i++)
+            elementData[i] = null;
+
+        size = 0;
+    }
+```
+
++ set(int index,E element)：指定位置修改元素,先检查index是否越界，即可进行修改操作
+
+```java
+public E set(int index, E element) {
+    rangeCheck(index);
+
+    E oldValue = elementData(index);
+    elementData[index] = element;
+    return oldValue;
+}
+```
+
++ get(int index)：查找指定位置的元素,先检查index是否越界，即可获取元素
+
+```java
+public E get(int index) {
+        rangeCheck(index);
+
+        return elementData(index);
+}
+```
+
+一次性扩容太大(例如2.5倍)可能会浪费更多的内存(1.5倍最多浪费33%，而2.5被最多会浪费60%，3.5倍则会浪费71%……)。但是一次性扩容太小，需要多次对数组重新分配内存，对性能消耗比较严重。所以1.5倍刚刚好，既能满足性能需求，也不会造成很大的内存消耗。ArrayList还给我们提供了将底层数组的容量调整为当前列表保存的实际元素的大小的功能。它可以通过trimToSize()方法来实现。该方法可以最小化ArrayList实例的存储量。
+
++ trimToSize()：缩小数组大小
+
+```java
+public void trimToSize() {
+        modCount++;
+        if (size < elementData.length) {
+            elementData = (size == 0)
+              ? EMPTY_ELEMENTDATA
+              : Arrays.copyOf(elementData, size);
+        }
+}
+```
+
+writeObject：序列化ArrayList的时候，ArrayList里面的elementData，未必是满的，没有必要序列化整个elementData，每次序列化的时候调用这个方法，先调用defaultWriteObject()方法序列化ArrayList中的非transient元素，elementData这个数组对象不去序列化它，而是遍历elementData，只序列化数组里面有数据的元素，这样一来，就可以加快序列化的速度，还能够减少空间的开销。
+
+```java
+private void writeObject(java.io.ObjectOutputStream s)
+        throws java.io.IOException{
+        // Write out element count, and any hidden stuff
+        int expectedModCount = modCount;
+        s.defaultWriteObject();
+
+        // Write out size as capacity for behavioural compatibility with clone()
+        s.writeInt(size);
+
+        // Write out all elements in the proper order.
+        for (int i=0; i<size; i++) {
+            s.writeObject(elementData[i]);
+        }
+
+        if (modCount != expectedModCount) {
+            throw new ConcurrentModificationException();
+        }
+    }
+```
+
+一般情况下，LinkedList的占用空间更大，因为每个节点要维护指向前后地址的两个节点，但也不是绝对，如果刚好数据量超过ArrayList默认的临时值时，ArrayList占用的空间也是不小的，因为扩容的原因会浪费将近原来数组一半的容量(当前你只不过使用比扩容前多一个位置而已)。不过，因为ArrayList的数组变量是用transient关键字修饰的，如果集合本身需要做序列化操作的话，ArrayList这部分多余的空间不会被序列化。
+
+###### LinkedList
+
+LinkedList的本质是双向链表；顺序访问会非常高效，而随机访问效率比较低。
 
 ```java
 public abstract class AbstractSequentialList<E> extends AbstractList<E>
@@ -1097,13 +1349,325 @@ LinkedList可以作为LIFO(后进先出)的栈，作为LIFO的栈时
 | pop()   | removeFirst() |
 | peek()  | peekFirst()   |
 
-LinkedList通过add(int index, E element)向LinkedList插入元素时。先是在双向链表中找到要插入节点的位置index；找到之后，再插入一个新节点。双向链表查找index位置的节点时，有一个加速动作：若index < 双向链表长度的1/2，则从前向后查找; 否则，从后向前查找。ArrayList向指定位置插入元素时，真正耗时的操作是 System.arraycopy(elementData, index, elementData, index + 1, size - index)，会移动index之后所有元素
+LinkedList通过add(int index, E element)向LinkedList插入元素时。先是在双向链表中找到要插入节点的位置index；找到之后，再插入一个新节点。双向链表查找index位置的节点时，有一个加速动作：若index < 双向链表长度的1/2，则从前向后查找; 否则，从后向前查找。
+
+###### Vector
+
+默认的初始容量为10；vector底层数组不加transient，序列化时会全部复制可以设置增长的空间大小，而ArrayList没有提供设置增长空间的方法。Vector每次扩容为原来的两倍；vector大部分方法都使用了synchronized修饰符，所以他是线层安全的集合类。
+
+```java
+public class Vector<E>
+    extends AbstractList<E>
+    implements List<E>, RandomAccess, Cloneable, java.io.Serializable{
+    //数组最大容量(扩容前的容量+1大于数组的最大容量时，返回的是整数最大值 2的31次方-1) 
+    private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
+    
+    //指定扩容增量
+    protected int capacityIncrement;
+    
+    public Vector() {
+        this(10);
+    }
+}
+```
+
+grow()：大小大于其容量时，容量自动增加的量。如果在创建Vector时，指定了capacityIncrement的大小；则，每次当Vector中动态数组容量增加时，增加的大小都是capacityIncrement。如果容量的增量小于等于零，则每次需要增大容量时，向量的容量将增大一倍。
+
+```java
+private void grow(int minCapacity) {
+        // overflow-conscious code
+        int oldCapacity = elementData.length;
+        int newCapacity = oldCapacity + ((capacityIncrement > 0) ?
+                                         capacityIncrement : oldCapacity);
+        if (newCapacity - minCapacity < 0)
+            newCapacity = minCapacity;
+        if (newCapacity - MAX_ARRAY_SIZE > 0)
+            newCapacity = hugeCapacity(minCapacity);
+        elementData = Arrays.copyOf(elementData, newCapacity);
+    }
+```
+
+###### Stack
+
+```java
+public class Stack<E> extends Vector<E> {
+
+    public Stack() {
+    }
+    
+    //把项元素压入堆栈顶部
+    public E push(E item) {
+        addElement(item);
+        return item;
+    }
+    
+    //移除堆栈顶部的对象，并作为此函数的值返回该对象
+    public synchronized E pop() {
+        E       obj;
+        int     len = size();
+        obj = peek();
+        removeElementAt(len - 1);
+        return obj;
+    }
+    
+    //查看堆栈顶部的对象，但不从堆栈中移除它
+    public synchronized E peek() {
+        int     len = size();
+        if (len == 0)
+            throw new EmptyStackException();
+        return elementAt(len - 1);
+    }
+
+    //判断堆栈是否为空
+    public boolean empty() {
+        return size() == 0;
+    }
+    
+	//返回对象在堆栈中的位置，以 1 为基数。
+    public synchronized int search(Object o) {
+        //调用Vector的方法
+        int i = lastIndexOf(o);
+        if (i >= 0) {
+            return size() - i;
+        }
+        return -1;
+    }
+
+    /** use serialVersionUID from JDK 1.0.2 for interoperability */
+    private static final long serialVersionUID = 1224463164541339165L;
+}
+```
+
+###### Collections.synchronizedList
+
+当synchronizedList传入的参数类型是ArrayList时， 因为ArrayList实现了RandomAccess接口，所以synchronizedList会构建一个SynchronizedRandomAccessList对象，SynchronizedRandomAccessList的父类是SynchronizedList。list 对象直接维护了传递进来的参数List类型参数而在get set add remove等方法中的实现都用线程同步语句块 synchronized (mutex)封装起来。mutex这把锁来自SynchronizedList的父类SynchronizedCollection中的一个成员变量final Object mutex，在构造方法中将自己本身作为mutex，即synchronizedList实现线程安全的方法就是对自己暴力加锁
+
+```java
+public static <T> List<T> synchronizedList(List<T> list) {
+        return (list instanceof RandomAccess ?
+                new SynchronizedRandomAccessList<>(list) :
+                new SynchronizedList<>(list));
+}
+```
+
+```java
+static class SynchronizedList<E>
+        extends SynchronizedCollection<E>
+        implements List<E> {
+        private static final long serialVersionUID = -7754090372962971524L;
+
+        final List<E> list;
+
+        SynchronizedList(List<E> list) {
+            super(list);
+            this.list = list;
+        }
+        SynchronizedList(List<E> list, Object mutex) {
+            super(list, mutex);
+            this.list = list;
+        }
+
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+            synchronized (mutex) {return list.equals(o);}
+        }
+    
+        public int hashCode() {
+            synchronized (mutex) {return list.hashCode();}
+        }
+
+        public E get(int index) {
+            synchronized (mutex) {return list.get(index);}
+        }
+        public E set(int index, E element) {
+            synchronized (mutex) {return list.set(index, element);}
+        }
+        public void add(int index, E element) {
+            synchronized (mutex) {list.add(index, element);}
+        }
+        public E remove(int index) {
+            synchronized (mutex) {return list.remove(index);}
+        }
+
+        public int indexOf(Object o) {
+            synchronized (mutex) {return list.indexOf(o);}
+        }
+        public int lastIndexOf(Object o) {
+            synchronized (mutex) {return list.lastIndexOf(o);}
+        }
+
+        public boolean addAll(int index, Collection<? extends E> c) {
+            synchronized (mutex) {return list.addAll(index, c);}
+        }
+    ......
+    }
+```
+
+SynchronizedCollection：在构造方法中将自己本身作为mutex锁
+
+```java
+static class SynchronizedCollection<E> implements Collection<E>, Serializable {
+        private static final long serialVersionUID = 3053995032091335093L;
+
+        final Collection<E> c;  // Backing Collection
+        final Object mutex;     // Object on which to synchronize
+
+        SynchronizedCollection(Collection<E> c) {
+            this.c = Objects.requireNonNull(c);
+            mutex = this;
+        }
+
+        SynchronizedCollection(Collection<E> c, Object mutex) {
+            this.c = Objects.requireNonNull(c);
+            this.mutex = Objects.requireNonNull(mutex);
+        }
+
+        public int size() {
+            synchronized (mutex) {return c.size();}
+        }
+        public boolean isEmpty() {
+            synchronized (mutex) {return c.isEmpty();}
+        }
+        public boolean contains(Object o) {
+            synchronized (mutex) {return c.contains(o);}
+        }
+        public Object[] toArray() {
+            synchronized (mutex) {return c.toArray();}
+        }
+        public <T> T[] toArray(T[] a) {
+            synchronized (mutex) {return c.toArray(a);}
+        }
+
+        public Iterator<E> iterator() {
+            return c.iterator(); // Must be manually synched by user!
+        }
+
+        public boolean add(E e) {
+            synchronized (mutex) {return c.add(e);}
+        }
+        public boolean remove(Object o) {
+            synchronized (mutex) {return c.remove(o);}
+        }
+
+        public boolean containsAll(Collection<?> coll) {
+            synchronized (mutex) {return c.containsAll(coll);}
+        }
+        public boolean addAll(Collection<? extends E> coll) {
+            synchronized (mutex) {return c.addAll(coll);}
+        }
+        public boolean removeAll(Collection<?> coll) {
+            synchronized (mutex) {return c.removeAll(coll);}
+        }
+        public boolean retainAll(Collection<?> coll) {
+            synchronized (mutex) {return c.retainAll(coll);}
+        }
+        public void clear() {
+            synchronized (mutex) {c.clear();}
+        }
+        public String toString() {
+            synchronized (mutex) {return c.toString();}
+        }
+        // Override default methods in Collection
+        @Override
+        public void forEach(Consumer<? super E> consumer) {
+            synchronized (mutex) {c.forEach(consumer);}
+        }
+        @Override
+        public boolean removeIf(Predicate<? super E> filter) {
+            synchronized (mutex) {return c.removeIf(filter);}
+        }
+        @Override
+        public Spliterator<E> spliterator() {
+            return c.spliterator(); // Must be manually synched by user!
+        }
+        @Override
+        public Stream<E> stream() {
+            return c.stream(); // Must be manually synched by user!
+        }
+        @Override
+        public Stream<E> parallelStream() {
+            return c.parallelStream(); // Must be manually synched by user!
+        }
+        private void writeObject(ObjectOutputStream s) throws IOException {
+            synchronized (mutex) {s.defaultWriteObject();}
+        }
+    }
+
+```
+
+在获取安全的list后遍历时，外层为何还要用synchronized同步?
+
+```java
+List list = Collections.synchronizedList(new ArrayList());
+      ...
+  //外部再加锁
+  synchronized (list) {
+      Iterator i = list.iterator(); // Must be in synchronized block
+      while (i.hasNext())
+          foo(i.next());
+  }
+```
+
+这两个锁是不同层面上的并发问题。迭代时的外部锁是为了解决并发遍历问题，为了list.iterator()在读取过程中，不会本来hasNext()的结果有的，但在调用i.next()的时候，另外一个线程把它删了，这个synchronized块是为了保障这三行代码在多个线程里同时执行的并发问题。至于synchronizedList的内部锁，是为了解决对list元素并发修改问题，在并发执行add/remove的时候，不要把多个线程的东西加到list内部实现的同一个位置上去，导致数据丢失或者脏数据等问题。
+
+###### Arrays.asList()
+
+Arrays.asList()并没有没把数组转换为List集合，源码底层还是一个数组
+
+```java
+public static <T> List<T> asList(T... a) {
+        return new ArrayList<>(a);
+}
+
+```
+
+ArrayList：Arrays的一个私有的静态内部类，从构造方法其实本质还是一个数组，一个泛型数组，只不过在这个数组外面套上一个`ArrayList`类的外壳。
+
+```java
+private static class ArrayList<E> extends AbstractList<E>
+        implements RandomAccess, java.io.Serializable
+    {
+        private static final long serialVersionUID = -2764017481108945198L;
+        private final E[] a;
+
+        ArrayList(E[] array) {
+            a = Objects.requireNonNull(array);
+        }
+    ...
+    }
+
+```
+
+正确的将数组转换为List集合
+
+```java
+private static<T> List<T> arrayToList(T[] array){
+        List<T> list = new ArrayList<>();
+        for (T t:array){
+            list.add(t);
+        }
+        return list;
+    }
+```
+
+```java
+String[] strings = new String[]{"张三","李四","王二","麻子"};
+List<String> list1 = new ArrayList<>(Arrays.asList(strings));
+```
+
+```java
+String[] strings = new String[]{"张三","李四","王二","麻子"};
+List<String> list = Arrays.stream(strings).collect(Collectors.toList());
+```
+
+
 
 ##### fail-fast机制
 
 fail-fast 机制是java集合(Collection)中的一种错误机制。当多个线程对同一个集合的内容进行操作时，就可能会产生fail-fast事件。例如：当某一个线程A通过iterator去遍历某集合的过程中，若该集合的内容被其他线程所改变了；那么线程A访问集合时，就会抛出ConcurrentModificationException异常，产生fail-fast事件。fail-fast机制，是一种错误检测机制。它只能被用来检测错误，因为JDK并不保证fail-fast机制一定会发生。若在多线程环境下使用fail-fast机制的集合，建议使用“java.util.concurrent包下的类”去取代“java.util包下的类”。
 
-ConcurrentModificationException是在操作Iterator时抛出的异常。我们先看看Iterator的源码。ArrayList的Iterator是在父类AbstractList.java中实现的，在调用 next() 和 remove()时，都会执行 checkForComodification()。若 “modCount 不等于 expectedModCount”，则抛出ConcurrentModificationException异常，产生fail-fast事件。在ArrayList中，无论是add()、remove()，还是clear()，只要涉及到修改集合中的元素个数时，都会改变modCount的值。
+ConcurrentModificationException是在操作Iterator时抛出的异常。在迭代器初始化过程中会将这个值赋给迭代器的 expectedModCount。我们先看看Iterator的源码。ArrayList的Iterator是在父类AbstractList.java中实现的，在调用 next() 和 remove()时，都会执行 checkForComodification()。若 “modCount 不等于 expectedModCount”，则抛出ConcurrentModificationException异常，产生fail-fast事件。在ArrayList中，无论是add()、remove()，还是clear()，只要涉及到修改集合中的元素个数时，都会改变modCount的值。
 
 ```java
 // Itr是Iterator(迭代器)的实现类
@@ -1211,6 +1775,168 @@ public class TreeMap<K,V>
     implements NavigableMap<K,V>, Cloneable, java.io.Serializable
 ```
 
+###### Collections.synchronizedMap
+
+```java
+public static <K,V> Map<K,V> synchronizedMap(Map<K,V> m) {
+    return new SynchronizedMap<>(m);
+}
+```
+
+```java
+private static class SynchronizedMap<K,V>
+        implements Map<K,V>, Serializable {
+        private static final long serialVersionUID = 1978198479659022715L;
+
+        private final Map<K,V> m;     // Backing Map
+        final Object      mutex;        // Object on which to synchronize
+
+        SynchronizedMap(Map<K,V> m) {
+            this.m = Objects.requireNonNull(m);
+            mutex = this;
+        }
+
+        SynchronizedMap(Map<K,V> m, Object mutex) {
+            this.m = m;
+            this.mutex = mutex;
+        }
+
+        public int size() {
+            synchronized (mutex) {return m.size();}
+        }
+        public boolean isEmpty() {
+            synchronized (mutex) {return m.isEmpty();}
+        }
+        public boolean containsKey(Object key) {
+            synchronized (mutex) {return m.containsKey(key);}
+        }
+        public boolean containsValue(Object value) {
+            synchronized (mutex) {return m.containsValue(value);}
+        }
+        public V get(Object key) {
+            synchronized (mutex) {return m.get(key);}
+        }
+
+        public V put(K key, V value) {
+            synchronized (mutex) {return m.put(key, value);}
+        }
+        public V remove(Object key) {
+            synchronized (mutex) {return m.remove(key);}
+        }
+        public void putAll(Map<? extends K, ? extends V> map) {
+            synchronized (mutex) {m.putAll(map);}
+        }
+        public void clear() {
+            synchronized (mutex) {m.clear();}
+        }
+
+        private transient Set<K> keySet;
+        private transient Set<Map.Entry<K,V>> entrySet;
+        private transient Collection<V> values;
+
+        public Set<K> keySet() {
+            synchronized (mutex) {
+                if (keySet==null)
+                    keySet = new SynchronizedSet<>(m.keySet(), mutex);
+                return keySet;
+            }
+        }
+
+        public Set<Map.Entry<K,V>> entrySet() {
+            synchronized (mutex) {
+                if (entrySet==null)
+                    entrySet = new SynchronizedSet<>(m.entrySet(), mutex);
+                return entrySet;
+            }
+        }
+
+        public Collection<V> values() {
+            synchronized (mutex) {
+                if (values==null)
+                    values = new SynchronizedCollection<>(m.values(), mutex);
+                return values;
+            }
+        }
+
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+            synchronized (mutex) {return m.equals(o);}
+        }
+        public int hashCode() {
+            synchronized (mutex) {return m.hashCode();}
+        }
+        public String toString() {
+            synchronized (mutex) {return m.toString();}
+        }
+
+        // Override default methods in Map
+        @Override
+        public V getOrDefault(Object k, V defaultValue) {
+            synchronized (mutex) {return m.getOrDefault(k, defaultValue);}
+        }
+        @Override
+        public void forEach(BiConsumer<? super K, ? super V> action) {
+            synchronized (mutex) {m.forEach(action);}
+        }
+        @Override
+        public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
+            synchronized (mutex) {m.replaceAll(function);}
+        }
+        @Override
+        public V putIfAbsent(K key, V value) {
+            synchronized (mutex) {return m.putIfAbsent(key, value);}
+        }
+        @Override
+        public boolean remove(Object key, Object value) {
+            synchronized (mutex) {return m.remove(key, value);}
+        }
+        @Override
+        public boolean replace(K key, V oldValue, V newValue) {
+            synchronized (mutex) {return m.replace(key, oldValue, newValue);}
+        }
+        @Override
+        public V replace(K key, V value) {
+            synchronized (mutex) {return m.replace(key, value);}
+        }
+        @Override
+        public V computeIfAbsent(K key,
+                Function<? super K, ? extends V> mappingFunction) {
+            synchronized (mutex) {return m.computeIfAbsent(key, mappingFunction);}
+        }
+        @Override
+        public V computeIfPresent(K key,
+                BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+            synchronized (mutex) {return m.computeIfPresent(key, remappingFunction);}
+        }
+        @Override
+        public V compute(K key,
+                BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+            synchronized (mutex) {return m.compute(key, remappingFunction);}
+        }
+        @Override
+        public V merge(K key, V value,
+                BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+            synchronized (mutex) {return m.merge(key, value, remappingFunction);}
+        }
+
+        private void writeObject(ObjectOutputStream s) throws IOException {
+            synchronized (mutex) {s.defaultWriteObject();}
+        }
+    }
+```
+
+| 集合          | 查找               | 增加                  | 删除               |
+| ------------- | ------------------ | --------------------- | ------------------ |
+| ArrayList     | O(1)               | 末尾O(1)     中间O(n) | O(n)               |
+| LinkedList    | O(n)               | 末尾O(1)     中间O(n) | O(1)               |
+| HashSet       | O(1)               | O(1)                  | O(1)               |
+| TreeSet       | O(log n)           | O(log n)              | O(log n)           |
+| LinkedHashSet | O(1)               | O(1)                  | O(1)               |
+| TreeMap       | O(log n)           | O(log n)              | O(log n)           |
+| LinkedHashMap | O(1)               | O(1)                  | O(1)               |
+| HashMap       | O(1)-O(n)/O(log n) | O(1)-O(n)/O(log n)    | O(1)-O(n)/O(log n) |
+
 #### 并发
 
 ##### synchronized
@@ -1220,3 +1946,8 @@ public class TreeMap<K,V>
 #### 其他
 
 ##### 排序
+
+##### 读取大文件
+
+##### 中断线程
+

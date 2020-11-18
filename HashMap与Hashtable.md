@@ -51,7 +51,7 @@ https://zhuanlan.zhihu.com/p/21673805
 
 #### HashMap
 
-HashMap是一个用于存储Key-Value键值对的集合，每一个键值对也叫做Node。这些个键值对（Node）分散存储在一个数组当中，这个数组就是HashMap的主干,HashMap数组每一个元素的初始值都是Null。
+HashMap是一个用于存储Key-Value键值对的集合，每一个键值对也叫做Node。这些键值对（Node）分散存储在一个数组当中，这个数组就是HashMap的主干,HashMap数组每一个元素的初始值都是Null。
 
 内部使用 **数组+链表/红黑树**，数组是用来确定位置，利用元素的key的hash值对数组长度取模得到，显然数组的查找效率比较高；而链表是用来解决hash冲突问题，当出现hash值一样的情形，就在数组上的对应位置形成一条链表。当链表长度>=8 & 数组长度的大小>=64 时，链表会转换为红黑树。键值对数量超过阈值(加载因子*当前数组的大小)时，则进行扩容，每次扩容2倍，保证数组的长度是2的次幂。为了存取高效，尽量减少碰撞，数据分配均匀，那么通过数组长度取模是一个非常不错的选择，但计算机中直接求余效率不如位移运算，数组长度为2次幂时，hash&(length-1)是等价于hash%length，这样可以提高位置的计算效率。
 
@@ -255,7 +255,7 @@ final Node<K,V>[] resize() {
     // 如果 table 不为空，表明已经初始化过了
         if (oldCap > 0) {
             // 当 table 容量超过容量最大值，则不再扩容
-            //static final int MAXIMUM_CAPACITY = 1 << 30;
+            //static final int MAXIMUM_CAPACITY = 1 << 30; 2的30次方
             if (oldCap >= MAXIMUM_CAPACITY) {
                 threshold = Integer.MAX_VALUE;
                 return oldTab;
@@ -506,7 +506,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     private static int RESIZE_STAMP_BITS = 16;
 
 
-    // 2^15-1，help resize的最大线程数  
+    // 2^16-1=65535，help resize的最大线程数  
     private static final int MAX_RESIZERS = (1 << (32 - RESIZE_STAMP_BITS)) - 1;
 
     //32-16=16，sizeCtl中记录size大小的偏移量 

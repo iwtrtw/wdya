@@ -22,3 +22,41 @@ https://blog.csdn.net/qq_39682377/article/details/81449451
 
 https://tech.meituan.com/2019/12/05/aqs-theory-and-apply.html
 
+[java] 反射和多态实现原理详解以及对比
+https://blog.csdn.net/topdeveloperr/article/details/81395710#%E5%8F%8D%E5%B0%84
+
+
+https://refactoringguru.cn/design-patterns/factory-method
+
+MySQL中的char与varchar详解
+https://www.cnblogs.com/Lance--blog/p/5193027.html
+
+设计模式
+http://laijianfeng.org/
+
+[spring] 注解@Autowired是如何实现的
+https://blog.csdn.net/topdeveloperr/article/details/87971446
+
+一条SQL语句执行得很慢的原因有哪些？---不看后悔系列
+https://mp.weixin.qq.com/s/ry9Kfh9Z1Tx3ux9k-V15nA
+
+
+校园网 win7设置代理服务器
+https://whirlys.blog.csdn.net/article/details/72675390
+
+
+https://ithuangqing.blog.csdn.net/article/details/104256879
+
+
+TCP/IP
+https://zhuanlan.zhihu.com/p/33889997
+
+https://www.zhihu.com/question/24853633
+
+https://www.jianshu.com/p/12790cea57ac
+
+TCP/IP详解 卷1：协议
+http://www.52im.net/topic-tcpipvol1.html
+
+https://www.cnblogs.com/zmlctt/p/3690998.html
+
