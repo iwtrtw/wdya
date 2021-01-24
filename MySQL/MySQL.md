@@ -87,7 +87,7 @@
   ```
   RC 隔离级别下，普通的 select 都是快照读，使用 MVCC 实现。
   
-  加锁的 select 都使用记录锁，因为没有 Gap Lock
+  加锁的 select 都使用Record Lock，因为没有 Gap Lock
   
   外键约束检查(foreign-key constraint checking)以及重复键检查(duplicate-key checking)时会使用间隙锁封锁区间；所以 RC 会出现幻读的问题。
   ```
@@ -97,9 +97,12 @@
   ```
   RR 隔离级别下，普通的 select 使用快照读(snapshot read)，底层使用 MVCC 来实现
   
-  加锁的 select(select ... in share mode / select ... for update)以及更新操作update, delete 等语句使用当前读（current read），底层使用记录锁、或者间隙锁、临键锁。
+  加锁的 select(select ... in share mode / select ... for update)以及更新操作update, delete 等语句使用当前读（current read），均使用next-key lock进行加锁。Next-Key Lock是行锁和间隙锁的组合，当InnoDB扫描索引记录的时候，会首先对索引记录加上行锁（Record Lock），再对索引记录两边的间隙加上间隙锁（Gap Lock）。加上间隙锁之后，其他事务就不能在这个间隙修改或者插入记录。
   
-  为了解决当前读中的幻读问题，MySQL事务使用了Next-Key锁。
+  当查询的索引含有唯一属性（唯一索引，主键索引）时，Innodb存储引擎会对next-key lock进行优化，将其降为record lock,即仅锁住索引本身，而不是范围。
+  delete from user where id=15 and id=20; //record lock
+  delete from user where id in(15,20);  //record lock
+  delete from user where id between 5 and 7; //next-key
   ```
 
   
@@ -175,7 +178,50 @@ InnoDB 存储引擎在分布式事务的情况下一般会用到SERIALIZABLE(可
 >
 > ORDER BY timer_start ASC;
 
++ 查看当前执行了什么语句
+
+> select * from performance_schema. events_statements_ current\G; 
+
++ 查看死锁保护机制
+
+> show variables like '%deadlock%'
+
+
+
 ...表锁在操作数据时会锁定整张表，并发性能较差；行锁则只锁定需要操作的数据，并发性能好。但是由于加锁本身需要消耗资源(获得锁、检查锁、释放锁等都需要消耗资源)，因此在锁定数据较多情况下使用表锁可以节省大量资源。MySQL中不同的存储引擎支持的锁是不一样的，例如MyIsam只支持表锁，而InnoDB同时支持表锁和行锁，且出于性能考虑，绝大多数情况下使用的都是行锁，使用表锁的情况: 当执行的sql(delete、update)中没有使用到索引信息，需要全表扫描才能确认sql执行的行数，此时就会使用表锁。
+
+查看死锁的方法有两种： 
+通过show engine innodb status命令可以查看最后一个死锁的情况 
+通过innodb_print_all_deadlocks参数配置可以将所有死锁的信息都打印到MySQL的错误日志中
+
+
+
+减少死锁发生的方法： 
+
+1、尽可能的保持事务小型化，减少事务执行的时间可以减少发生影响的概率 
+2、及时执行commit或者rollback，来尽快的释放锁 
+3、当要访问多个表数据或者要访问相同表的不同行集合时，尽可能的保证每次访问的顺序是相同的。比如可以将多个语句封装在存储过程中，通过调用同一个存储过程的方法可以减少死锁的发生 
+4、增加合适的索引以便语句执行所扫描的数据范围足够小 
+5、尽可能的少使用锁，比如如果可以承担幻读的情况，则直接使用select语句，而不要使用select…for update语句 
+6、如果没有其他更好的选择，则可以通过施加表级锁将事务执行串行化，最大限度的限制死锁发生
+
+### TPS
+
+计算数据库的TPS
+
+> show global status like '%com_rollback%';
+>
+> show global status like '%com_commit%';
+
+计算 TPS 的方法时( com_commit + com_rollback）/time 。但是利用这种方法进行计算的前提是：所有的事务必须都是显示提交的，如果存在隐式提交和回滚（默认autocommit =1 ），不会计算到com_commit 和 com_rollback 变量中
+
+mysql 数据库中另外还有两个参数handler_commit 和 handler_rollback 用于事务的统计操作。可以很好的用来统计InnoDB 存储引擎显式和隐式的事务提交操作。
+
+如果用户的程序都是显示控制事务的提交和回滚，那么可以通过com_commit 和 com_rollback 进行统计。
+
+
+
+
 
 
 
@@ -184,6 +230,8 @@ InnoDB 存储引擎在分布式事务的情况下一般会用到SERIALIZABLE(可
 为什么要使用redolog，而不是在事务提交前直接把数据写入磁盘呢？
 
 CPU速度与磁盘读写速度差距有多大？？？
+
+如何计算数据的TPS
 
 高可靠性、高可用性？？？
 
