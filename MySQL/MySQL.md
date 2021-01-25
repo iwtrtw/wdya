@@ -133,7 +133,9 @@ InnoDB 存储引擎在分布式事务的情况下一般会用到SERIALIZABLE(可
 
 
 
-### 锁/MVCC
+### 锁/LBCC/MVCC
+
+
 
 > Deadlock found when trying to get lock; try restarting transaction //死锁，事务回滚
 >
@@ -176,6 +178,47 @@ InnoDB 存储引擎在分布式事务的情况下一般会用到SERIALIZABLE(可
 > ORDER BY timer_start ASC;
 
 ...表锁在操作数据时会锁定整张表，并发性能较差；行锁则只锁定需要操作的数据，并发性能好。但是由于加锁本身需要消耗资源(获得锁、检查锁、释放锁等都需要消耗资源)，因此在锁定数据较多情况下使用表锁可以节省大量资源。MySQL中不同的存储引擎支持的锁是不一样的，例如MyIsam只支持表锁，而InnoDB同时支持表锁和行锁，且出于性能考虑，绝大多数情况下使用的都是行锁，使用表锁的情况: 当执行的sql(delete、update)中没有使用到索引信息，需要全表扫描才能确认sql执行的行数，此时就会使用表锁。
+
+#### LBCC
+
+​		基于锁的并发控制（Lock Based Concurrency Control）；使用锁的机制，在当前事务需要对数据修改时，将当前事务加上锁，同一个时间只允许一条事务修改当前数据，其他事务必须等待锁释放之后才可以操作。
+
+#### MVCC
+
+​		多版本的并发控制（Multi-Version Concurrency Control）；使用版本来控制并发情况下的数据问题，MVCC使得数据库读不会对数据加锁，普通的SELECT请求不会加锁，提高了数据库的并发处理能力。 借助MVCC，数据库可以实现READ COMMITTED，REPEATABLE READ等隔离级别，用户可以查看当前数据的前一个或者前几个历史版本，保证了ACID中的I特性（隔离性)。
+
+​		InnoDB的MVCC是通过在每行记录后面保存两个隐藏的列来实现的，一个保存了行的事务ID(**DB_TRX_ID**)，一个保存了行的回滚指针(**DB_ROLL_PT**)。每开始一个新的事务，都会自动递增产 生一个新的事务id。事务开始时刻的会把事务id放到当前事务影响的行事务id中，当查询时需要用当前事务id和每行记录的事务id进行比较。在REPEATABLE READ隔离级别下，MVCC的操作如下：
+
++ select
+
+```
+1.InnoDB只查找版本早于当前事务版本的数据行（也就是，行的事务编号小于或等于当前事务的事务编号），这样可以确保事务读取的行，要么是在事务开始前已经存在的，要么是事务自身插入或者修改过的。
+2.删除的行要事务ID判断，读取到事务开始之前状态的版本，只有符合上述两个条件的记录，才能返回作为查询结果。
+```
+
++ insert：InnoDB为新插入的每一行保存当前事务编号作为行版本号
++ delete：InnoDB为删除的每一行保存当前事务编号作为行删除标识
++ update：InnoDB为插入一行新记录，保存当前事务编号作为行版本号，同时保存当前事务编号到原来的行作为行删除标识
+
+​		MVCC使大多数普通读操作都可以不用加锁。这样设计使得读数据操作很简单，性能很好，并且也能保证只会读取到符合标准的行。不足之处是每行记录都需要额外的存储空间，需要做更多的行检查工作，以及一些额外的维护工作（MVCC只在REPEATABLE READ和READ COMMITIED两个隔离级别下工作。其他两个隔离级别都和 MVCC不兼容 ，因为READ UNCOMMITIED总是读取最新的数据行，而不是符合当前事务版本的数据行。而SERIALIZABLE则会对所有读取的行都加锁）
+
+所谓的MVCC（Multi-Version Concurrency Control ，多版本并发控制）指的就是在使用 **READ COMMITTD** 、**REPEATABLE READ** 这两种隔离级别的事务在执行普通的 SEELCT 操作时访问记录的版本链的过程，这样子可以使不同事务的 `读-写` 、 `写-读` 操作并发执行，从而提升系统性能。READ COMMITTED和REPEATABLE READ隔离级别的的一个区别是它们生成 ReadView 的时机不同。在 READ COMMITTED 中每次查询都会生成一个实时的 ReadView，做到保证每次提交后的数据是处于当前的可见状态。而 REPEATABLE READ 中，在当前事务第一次查询时生成当前的 ReadView，并且当前的 ReadView 会一直沿用到当前事务提交，以此来保证可重复读（REPEATABLE READ）
+
+​		在mysql中MVCC是通过undo log和read view来实现的，undo log分为insert undo log和update undo log
+
++ insert undo log：insert操作记录只对当前事务本身可见，对于其他事务此记录不可见，所以 insert undo log 可以在事务提交后直接删除而不需要进行purge操作（purge的主要任务是将数据库中已经 mark del 的数据删除，另外也会批量回收undo pages）
+
+  | DB_TRX_ID  | DB_ROOLL_PT | ...  |
+  | ---------- | ----------- | ---- |
+  | 当前事务id | null        | ...  |
+
++ update undo log：update 或 delete 操作会对已经存在的记录产生影响，为了提供 MVCC机制，因此update undo log 不能在事务提交时就进行删除，而是将事务提交时放到入 history list 上，等待 purge 线程进行最后的删除操作。
+
+#### Read View
+
+
+
+
 
 
 
