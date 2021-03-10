@@ -5,13 +5,208 @@
 + 数据库实体封装，隐藏数据真实性：先设计业务模型，然后根据业务模型分离出数据模型并设计数据库，在业务处理过程中使用View Object封装业务数据供前端展示
 
   + 数据模型(Data Object-M)：数据层，与数据库映射，通过ORM将数据库中的数据转换为Java Object；关注数据的CURD效率
-  + 领域模型(Domain Model-M)：业务核心模型，拥有完成的生命周期(创建、查询、修改、删除)；关注核心业务处理
+  + **领域模型(Domain Model-M)**：业务核心模型，拥有完成的生命周期(创建、查询、修改、删除)；关注核心业务处理(由Service层组装实现业务)
   + 展示聚合模型(View Object-C)：与前端对接模型，隐藏内部细节
   
-+ 数据类型
-  + 主业务数据：master data
-  + 操作型数据：log data（记录状态，可以用于异步事件完成情况的判断）
 
+![架构设计](kill\架构设计.png)
+
+
+
+#### 数据库设计
+
+UserPaaword：将 password分离出来（只有登录的时候才设计）
+
+ItemStock：库存操作(行锁)分离，后续该可以根据itemId取模进行分库分表
+
+Order：自定义id(时间+序列)
+
+Sequence：表名+当前值+步长
+
+Promo：开始时间、结束时间、秒杀价格、活动状态(未开始、进行中、已结束)、商品id
+
+![业务模型](kill\数据模型.png)
+
+#### 业务设计
+
+##### 用户模块
+
++ 注册：手机验证码→注册信息校验(字段校验+密码加密)→存入数据库(Transaction：用户信息与密码分开存储)
+
+  > UserVo→UserModel→User、Password
+
++ 登录：数据校验→检验密码(两次查询：手机号码查用户id、用户id查密码)→返回用户信息(放入Session中)
+
+  > User+Passwrod→UserVo
+
+##### 商品模块
+
++ 商品列表：三次查询（商品、商品id查库存、商品查活动)
+
+  > Item+ItemStock→ItemModel+PromoModel→ItemVo
+
++ 商品详情：三次查询（商品、商品id查库存、商品id查活动）
+
+  > Item+ItemStock→ItemModel+PromoModel→ItemVo
+  
++ 下单：[itemId、amount、promoId]校验用户(是否登录)→校验商品(商品是否存在、购买数量是否合法)→校验活动(是否正在进行)→**减库存**→**创建订单**(订单号、用户id、商品id、价格、活动id、数量、总价)→**修改商品销量**
+
+![业务模型](kill\业务模型.png)
+
+#### 基础模块
+
+###### 全局异常
+
+@ControllerAdvice(切面编程)：处理一切异常(Controller内+Controller以外发生的异常)，返回给前端错误信息码，而不是springMVC自带错误页面
+
++ 自定义异常：基于装饰者模式设计自定义异常
+
+```java
+public interface CommonError {
+    public int getErrCode();
+    public String getErrMsg();
+    public CommonError setErrMsg(String errMsg);
+}
+```
+
+```java
+public enum EmBusinessError implements CommonError {
+    //通用错误类型10001
+    PARAMETER_VALIDATION_ERROR(10001,"参数不合法"),
+    UNKNOWN_ERROR(10002,"未知错误"),
+
+    //20000开头为用户信息相关错误定义
+    USER_NOT_EXIST(20001,"用户不存在"),
+    USER_LOGIN_FAIL(20002,"用户手机号或密码不正确"),
+    USER_NOT_LOGIN(20003,"用户还未登陆"),
+    //30000开头为交易信息错误定义
+    STOCK_NOT_ENOUGH(30001,"库存不足"),
+    ;
+
+    EmBusinessError(int errCode,String errMsg){
+        this.errCode = errCode;
+        this.errMsg = errMsg;
+    }
+
+
+    private int errCode;
+    private String errMsg;
+
+
+    @Override
+    public int getErrCode() {
+        return this.errCode;
+    }
+
+    @Override
+    public String getErrMsg() {
+        return this.errMsg;
+    }
+
+    public void setErrCode(int errCode) {
+        this.errCode = errCode;
+    }
+
+    @Override
+    public CommonError setErrMsg(String errMsg) {
+        this.errMsg = errMsg;
+        return this;
+    }
+}
+
+```
+
+```java
+public class BusinessException extends Exception implements CommonError {
+
+    private CommonError commonError;
+
+    //直接接收EmBusinessError的传参用于构造业务异常
+    public BusinessException(CommonError commonError){
+        super();
+        this.commonError = commonError;
+    }
+
+    //接收自定义errMsg的方式构造业务异常
+    public BusinessException(CommonError commonError,String errMsg){
+        super();
+        this.commonError = commonError;
+        this.commonError.setErrMsg(errMsg);
+    }
+
+    @Override
+    public int getErrCode() {
+        return this.commonError.getErrCode();
+    }
+
+    @Override
+    public String getErrMsg() {
+        return this.commonError.getErrMsg();
+    }
+
+    @Override
+    public CommonError setErrMsg(String errMsg) {
+        this.commonError.setErrMsg(errMsg);
+        return this;
+    }
+
+    public CommonError getCommonError() {
+        return commonError;
+    }
+}
+```
+
++ ServletRequestBindingException：url路由绑定出错(路由没有传参)
++ NoHandlerFoudException：访问路径找不到
+
+```properties
+#访问路径查找失败异常抛出
+spring.mvc.throw-exception-if-no-handler-found=true
+spring.resources.add-mappings=false
+```
+
+```java
+@ControllerAdvice
+public class GlobalExceptionHandler{
+    @ExceptionHandler(Exception.class)
+    @ResponseBody
+    public CommonReturnType doError(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Exception ex) {
+        ex.printStackTrace();
+        Map<String,Object> responseData = new HashMap<>();
+        if( ex instanceof BusinessException){
+            BusinessException businessException = (BusinessException)ex;
+            responseData.put("errCode",businessException.getErrCode());
+            responseData.put("errMsg",businessException.getErrMsg());
+        }else if(ex instanceof ServletRequestBindingException){
+            responseData.put("errCode",EmBusinessError.UNKNOWN_ERROR.getErrCode());
+            responseData.put("errMsg","url绑定路由问题");
+        }else if(ex instanceof NoHandlerFoundException){
+            responseData.put("errCode",EmBusinessError.UNKNOWN_ERROR.getErrCode());
+            responseData.put("errMsg","没有找到对应的访问路径");
+        }else{
+            responseData.put("errCode", EmBusinessError.UNKNOWN_ERROR.getErrCode());
+            responseData.put("errMsg",EmBusinessError.UNKNOWN_ERROR.getErrMsg());
+        }
+        return CommonReturnType.create(responseData,"fail");
+    }
+}
+```
+
+###### 统一返回结果
+
++ 跨域
+
+###### 数据校验
+
+
+
+
+
++ 数据类型
+  
+  + 主业务数据：master data
++ 操作型数据：log data（记录状态，可以用于异步事件完成情况的判断）
+  
 + 分库分表：根据id尾号分散到不同的数据库中
 
 + 统一返回结果：通用返回结果
@@ -28,12 +223,12 @@
 
 + **@Transactional**失效
 
-+ 数据库表操作时尽量少使用null字段，设计表时尽量设为NOT NULL，使用-1或空字符串作为默认值，多数情况下null字段对于前端展示是没有意义的，而java中对空指针的处理是十分脆弱的
++ 数据库表操作时尽量少使用null字段，设计表时尽量设为NOT NULL，使用-1或空字符串作为默认值，多数情况下null字段对于前端展示是没有意义的，而java中对空指针的处理是十分脆弱的。而在使用唯一索引时，则不要设为NOT NULL，若对应的字段在某些情况下是null时，这是不影响使用索引的，但如果字段设置了NOT NULL并具有默认值，这样就违反了唯一性，无法使用唯一索引
 
-  而在使用唯一索引时，则不要设为NOT NULL，若对应的字段在某些情况下是null时，这是不影响使用索引的，但如果字段设置了NOT NULL并具有默认值，这样就违反了唯一性，无法使用唯一索引
++ 数据源的使用？
 
   ### Q
-  
+
   Contorller中的通过@Autowrite注入service是单例的吗？
   
   mysql date、datetime、time的区别？

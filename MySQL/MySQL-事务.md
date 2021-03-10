@@ -45,7 +45,7 @@
 
 #### 四大隔离级别
 
-当事务并发操作同一份数据时，读操作可能会产生脏读、不可重复读、幻读等问题
+当事务并发操作同一份数据时，**读操作**可能会产生脏读、不可重复读、幻读等问题
 
 + 脏读：一个事务可以读到另一个事务中未提交的数据。对于两个事务T1、T2，T1读到了已经被T2**更新但还没有被提交**的数据。假如T2回滚，那么T1读到的内容就是临时且无效的，这违反了事务的隔离性。
 
@@ -57,6 +57,8 @@
   不可重复读和脏读的区别是，脏读是某一事务读取了另一个事务未提交的脏数据，而不可重复读则是读取了前一事务提交的数据。
   幻读和不可重复读都是读取了另一条已经提交的事务（这点就脏读不同），所不同的是不可重复读查询的都是同一个数据项，而幻读针对的是一批数据整体（比如数据的个数）不可重复读重点在于update和delete，而幻读的重点在于insert。
   ```
+
+**写操作**会出现数据丢失等问题：A和B一起执行了一个数据，然后B事务先提交，后来A事务回滚或提交，那么B事务的操作会因为A事务回滚或提交而丢失；
 
 为了有效保证并发事务读取数据的正确性，提出了事务隔离级别，InnoDB中事务隔离级别是依靠锁机制和MVCC来实现的，SQL标准定义了四种隔离级别：
 
@@ -85,9 +87,9 @@
 + READ COMMIITTED：读提交，即一个事务要等另一个事务提交后才能读取最新数据。只允许事务读取其它事务已提交的变更，可以避免脏读，但不可重复读和幻读问题仍然可能出现
 
   ```
-  RC 隔离级别下，普通的 select 都是快照读，使用 MVCC 实现。
+  RC隔离级别下，普通的select都是快照读，使用MVCC实现
   
-  加锁的 select 都使用Record Lock，因为没有 Gap Lock
+  加锁的select都使用Record Lock，因为没有Gap Lock
   
   外键约束检查(foreign-key constraint checking)以及重复键检查(duplicate-key checking)时会使用间隙锁封锁区间；所以 RC 会出现幻读的问题。
   ```
@@ -95,9 +97,9 @@
 + REPEATABLE READ：重复读，确保事务可以多次从一个字段中读取相同的值(但可能不是最新值)，即事务不会读到其他事务对已有数据的修改，即使其他事务已提交，也就是说，事务开始时读到的已有数据是什么，在事务提交前的任意时刻，这些数据的值都是一样的。可以避免脏读和不可重复读，但幻读问题仍存在。在SQL标准中，RR是无法避免幻读问题的，但是InnoDB实现的RR避免了幻读问题。
 
   ```
-  RR 隔离级别下，普通的 select 使用快照读(snapshot read)，底层使用 MVCC 来实现
+  RR隔离级别下，普通的select使用快照读(snapshot read)，底层使用MVCC来实现
   
-  加锁的 select(select ... in share mode / select ... for update)以及更新操作update, delete 等语句使用当前读（current read），均使用next-key lock进行加锁。Next-Key Lock是行锁和间隙锁的组合，当InnoDB扫描索引记录的时候，会首先对索引记录加上行锁（Record Lock），再对索引记录两边的间隙加上间隙锁（Gap Lock）。加上间隙锁之后，其他事务就不能在这个间隙修改或者插入记录。
+  加锁的select(select ... in share mode / select ... for update)以及更新操作update, delete 等语句使用当前读（current read），均使用next-key lock进行加锁。Next-Key Lock是行锁和间隙锁的组合，当InnoDB扫描索引记录的时候，会首先对索引记录加上行锁（Record Lock），再对索引记录两边的间隙加上间隙锁（Gap Lock）。加上间隙锁之后，其他事务就不能在这个间隙修改或者插入记录。
   
   当查询的索引含有唯一属性（唯一索引，主键索引）时，Innodb存储引擎会对next-key lock进行优化，将其降为record lock,即仅锁住索引本身，而不是范围。
   delete from user where id=15 and id=20; //record lock
@@ -105,13 +107,64 @@
   delete from user where id between 5 and 7; //next-key
   ```
 
-  
-
 + SERIALIZABLE：序列化，事务串行化顺序执行。确保事务可以从一个表中读取相同的行，在这个事务持续期间，禁止其它事务对该表的插入、更行和删除操作。可以避免脏读、不可重复读、幻读问题但性能低下
 
   ```
-  Serializable 所有的 select 语句都会被隐式的转化为 select ... in share mode，会和update、delete 互斥。
+  Serializable所有的select语句都会被隐式的转化为select ... in share mode，会和update、delete 互斥。
   ```
+
+| 级别     | symbol           | 值   | 描述                                                         |
+| -------- | ---------------- | ---- | ------------------------------------------------------------ |
+| 读未提交 | READ-UNCOMMITTED | 0    | 存在脏读、不可重复读、幻读的问题                             |
+| 读已提交 | READ-COMMITTED   | 1    | 解决脏读的问题，存在不可重复读、幻读的问题                   |
+| 可重复读 | REPEATABLE-READ  | 2    | mysql 默认级别，解决脏读、不可重复读的问题，存在幻读的问题。使用 MMVC机制 实现可重复读 |
+| 序列化   | SERIALIZABLE     | 3    | 解决脏读、不可重复读、幻读，可保证事务安全，但完全串行执行，性能最低 |
+
+##### REPEATABLE-READ问题
+
++ B事务在A事务进行第一次select前修改某个数据(id=p)并提交，A事务是查询(select)到修改后的数据
+
+| Session A                                                    | Session B                                                    |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| START TRANSACTION;                                           | START TRANSACTION;                                           |
+|                                                              | update student set title='CR' where id=12; (在此之前title值不为CR) |
+|                                                              | COMMIT;                                                      |
+| select * from student where id=12;    （可以看到B修改的title值）ReadView第一次生成 |                                                              |
+
++ B事务在A事务进行过程中插入新数据(id=p)并提交，虽然A事务是查询(select)不到新数据，但A事务想插入相同新数据(id=p)时却失败了（明明查询显示没有，但却插入失败，报错提示记录id重复）
+
+  >  select * from student **LOCK IN SHARE MODE**; 
+  >
+  >  select * from student **FOR UPDATE**;
+  >
+  >  InnoDB提供了这样的机制，在默认的可重复读的隔离级别里，可以使用加锁读去查询最新的数据，如果使用加锁读，是可以读到其他事务中已提交的新增insert数据或delete掉的数据。
+
+| Session A                                                    | Session B                            |
+| ------------------------------------------------------------ | ------------------------------------ |
+| START TRANSACTION;                                           | START TRANSACTION;                   |
+| SELECT * FROM student;  （>>empty set）                      |                                      |
+|                                                              | INSERT INTO student VALUES (1, 'a'); |
+| SELECT * FROM student;    (>>empty set)                      |                                      |
+| INSERT INTO student VALUES (1, 'a');  (>>ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction)  阻塞被锁住，等待一段时间后报错 |                                      |
+|                                                              | COMMIT;                              |
+| SELECT * FROM student;    (>>empty set)                      |                                      |
+| INSERT INTO student VALUES (1, 'a');  (>>Duplicate entry '1' for key 'PRIMARY')  插入失败 |                                      |
+
++ 事务B事务中A进行过程中插入新数据(id=p)并提交，虽然A事务是查询(select)不到新数据，但A事务进行更新操作时(update/delete)是可以对看不到的新数据(id=p)产生影响的，当A事务对(id=p)新数据进行update时(必须某个值和原来的记录不一样，否则再次查询还是没有多出数据的)，再次查询数据发现多出了一条数据；当A事务对(id=p)新数据进行delete，是会把新数据(id=p)删掉的(A事务提交后)
+
+| Session A                                                    | Session B                            |
+| ------------------------------------------------------------ | ------------------------------------ |
+| START TRANSACTION;                                           | START TRANSACTION;                   |
+| SELECT * FROM student;  （>>empty set）                      |                                      |
+|                                                              | INSERT INTO student VALUES (1, 'a'); |
+| SELECT * FROM student;    (>>empty set)                      |                                      |
+| UPDATE student SET value='b' ;   (>>ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction)  阻塞被锁住，等待一段时间后报错 |                                      |
+|                                                              | COMMIT;                              |
+| SELECT * FROM student;    (>>empty set)                      |                                      |
+| UPDATE student SET value='b'  ;   (>>Rows matched: 1 Changed: 1 Warnings: 0)    **将所有行值替换为b,这会影响到id=1的数据，虽然当前事务并不知道id=1数据的存在；由于value=b和原来value=a不同，则更新成功** |                                      |
+| SELECT * FROM student;    (>>多出了更新后的记录，但之前并没插入过) |                                      |
+
++ 事务B事务中A进行第一次select后过程中删除掉某个数据(id=p)并提交，A事务是可以查询(select)到数据(id=p)，但A事务对数据(id=p)进行update/delete操作时完全不起作用，使用select依旧可以查询到数据(id=p)
 
 事物隔离级别不是设置得越高越好，事物隔离级别设置得越高，意味着势必要花手段去加锁用以保证事物的正确性，那么效率就要降低，因此实际开发中往往要在效率和并发正确性之间做一个取舍，一般情况下会设置为READ_COMMITED，此时避免了脏读，并发性也还不错，之后再通过一些别的手段去解决不可重复读和幻读的问题就好了。
 
