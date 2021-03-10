@@ -49,7 +49,7 @@ public class Singleton {
 }
 ```
 
-双重检查：对象在创建的过程的一些步骤可能会被重排序，从而导致在多线程情况下，线程可能会拿到一个不为null但还未初始化完成的对象去使用；对象创建的步骤大概分为3步：
++ 双重检查：对象在创建的过程的一些步骤可能会被重排序，从而导致在多线程情况下，线程可能会拿到一个不为null但还未初始化完成的对象去使用；对象创建的步骤大概分为3步：
 
 1. 分配对象内存空间
 2. 初始化对象
@@ -924,7 +924,7 @@ public class Adapter implements Target{
 
 Advice的类型有：MethodBeforeAdvice、AfterReturningAdvice、ThrowsAdvice；在每个类型 Advice 都有对应的拦截器，MethodBeforeAdviceInterceptor、AfterReturningAdviceInterceptor、ThrowsAdviceInterceptor；Spring需要将每个 Advice 都封装成对应的拦截器类型，返回给容器，所以需要使用适配器模式对 Advice 进行转换
 
-+ spring mvc中的适配者模式：pring MVC中的适配器模式主要用于执行目标 Controller 中的请求处理方法。在Spring MVC中，DispatcherServlet 作为用户，HandlerAdapter 作为期望接口，具体的适配器实现类用于对目标类进行适配，Controller 作为需要适配的类。为什么要在 Spring MVC 中使用适配器模式？Spring MVC 中的 Controller 种类众多，不同类型的 Controller 通过不同的方法来对请求进行处理。如果不利用适配器模式的话，DispatcherServlet 直接获取对应类型的 Controller，需要的自行来判断
++ spring mvc中的适配者模式：spring MVC中的适配器模式主要用于执行目标 Controller 中的请求处理方法。在Spring MVC中，DispatcherServlet 作为用户，HandlerAdapter 作为期望接口，具体的适配器实现类用于对目标类进行适配，Controller 作为需要适配的类。为什么要在 Spring MVC 中使用适配器模式？Spring MVC 中的 Controller 种类众多，不同类型的 Controller 通过不同的方法来对请求进行处理。如果不利用适配器模式的话，DispatcherServlet 直接获取对应类型的 Controller，需要的自行来判断
 
 ### 装饰器模式
 

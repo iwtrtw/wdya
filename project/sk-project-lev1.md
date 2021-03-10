@@ -279,7 +279,7 @@ tail -f  access.log  动态查考access.log的尾部信息
 
 内置Tomcat默认连接
 
-+ 线程数量：4核8G内存单进程调度线程数800-1000以上之后，就会在CPU调度上耗费大量时间
++ 线程数量：4核8G内存单进程调度线程数800-1000以上之后，就会在CPU调度上耗费大量时间（单机200TPS：CPU主要耗在mysql上）
 + 等待队列长度：队列用作缓冲池，但不能无限长，会消耗内存，出队入队也会消耗内存
 
 ##### MySql数据库QPS容量问题
@@ -307,11 +307,15 @@ tail -f  access.log  动态查考access.log的尾部信息
 
 单机容量问题：CPU使用率增加，memory增加，网络带宽使用增加
 
+| 4核 8G | 200TPS(商品列表) |
+| ------ | ---------------- |
+|        |                  |
+
 > cpu us：用户空间的cpu使用情况(用户进程)
 >
 > cpu sy：内核空间的cpu使用情况(系统调用)
 >
-> load average：1、5、15分钟load平均值，0代表通常，1代表cup被占用满，1+代表cpu等待阻塞
+> load average：1、5、15分钟CPUload平均值，0代表通常，1代表cup被占用满，1+代表cpu等待阻塞
 >
 > memory:free 空闲内存  used使用内存
 
@@ -319,7 +323,7 @@ tail -f  access.log  动态查考access.log的尾部信息
 
 mysql部署开放远程连接；服务进行水平扩展，对称部署；引入Nginx用作负载均衡（即需要四台服务器Nginx、Mysql、Server1、Server2）
 
-![水平拓展](image\水平拓展.png)
+![水平拓展](..\image\水平拓展.png)
 
 + mysql开发远程端口：在mysql数据库的mysql库user表中存放着用户信息
 
