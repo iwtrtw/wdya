@@ -47,11 +47,11 @@ volatile禁止指令重排序也有一些规则：
 
 + 在每个volatile写操作前插入StoreStore屏障，在写操作后插入StoreLoad屏障
 
-![volatile写屏障](image\volatile写屏障.png)
+![volatile写屏障](..\image\volatile写屏障.png)
 
 + 在每个volatile读操作的后面插入一个LoadLoad屏障,在每个volatile读操作的后面插入一个LoadStore屏障
 
-![volatile读屏障](image\volatile读屏障.png)
+![volatile读屏障](..\image\volatile读屏障.png)
 
 #### volatile的的底层实现
 

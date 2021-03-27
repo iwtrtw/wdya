@@ -192,4 +192,4 @@ public enum State {
 }
 ```
 
-![java-thread](/image/java-thread.jpg)
+![java-thread](../image/java-thread.jpg)

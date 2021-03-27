@@ -307,9 +307,9 @@ tail -f  access.log  动态查考access.log的尾部信息
 
 单机容量问题：CPU使用率增加，memory增加，网络带宽使用增加
 
-| 4核 8G | 200TPS(商品列表) |
-| ------ | ---------------- |
-|        |                  |
+| 4核 8G                    | 200TPS(商品列表)  |
+| ------------------------- | ----------------- |
+| mysql+nginx+4核 8G+4核 8G | 1500TPS(商品列表) |
 
 > cpu us：用户空间的cpu使用情况(用户进程)
 >
@@ -387,7 +387,13 @@ server.tomcat.accesslog.pattern=%h %l %u %t "%r" %s %b %D
 
 + 基于唯一token实现会话共享，将token存入redis中，客户端每次请求都带上token
 
-  用户登录后生成token返回给客户端，服务端将token存入redis中，每次客户端请求必须带上token，服务端会判断token是否有效，有效才放行，否则通知客户端要先登录
+  **用户登录后**生成token返回给客户端，服务端将token存入redis中，每次客户端请求必须带上token，服务端会判断token是否有效，有效才放行，否则通知客户端要先登录
+  
+  > redisTemplate.opsForValue().set(uuidToken,userModel)
+  >
+  > redisTemplate.expire(uuidToken,1,TimeUnit.HOURS)
+  >
+  > token:userInfo   //设置超时时间
 
 #### 多级缓存
 
@@ -395,12 +401,97 @@ server.tomcat.accesslog.pattern=%h %l %u %t "%r" %s %b %D
 
 + 快速存取，使用内存
 + 将缓存推到离用户最近的地方
-+ 缓存清理与同步，源数据变更需要同步到缓存中
++ 缓存清理与同步，源数据变更需要同步到缓存中(缓存易丢失性)
 
 ###### 多级缓存
 
 + redis缓存：第一次从数据库查询数据时将结果存放到redis中，以后的查询先从redis中获取，如果没有则从数据库中查询，并将查询结果放入redis中
+
+  > 要想存入redis必须先序列化，可以自定义key和value的序列化方式
+
+  ```java
+  @Bean
+  public RedisTemplate redisTemplate(RedisConnectionFactory redisConnectionFactory){
+      RedisTemplate redisTemplate = new RedisTemplate();
+      redisTemplate.setConnectionFactory(redisConnectionFactory);
+  
+          //首先解决key的序列化方式
+          StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+          redisTemplate.setKeySerializer(stringRedisSerializer);
+  
+          //解决value的序列化方式
+          Jackson2JsonRedisSerializer jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(Object.class);
+   redisTemplate.setValueSerializer(jackson2JsonRedisSerializer);
+  
+          return redisTemplate;
+      }
+  ```
+
+  + 商品详情页：先查询缓存
+
 + 本地缓存(程序内部)：使用缓存Map——**Guava cache** （对更新频繁地数据不适用而且受限于JVM内存大小）
+
+  + 存放热点数据（每秒访问上万，减少去访问redis的网络开销）
+  + 脏读不敏感
+  + 内存限制
+  + 生命周期短（适合瞬时访问）
+
+  **Guava cache**：支持并发读写、可控制大小和超时时间、可配置LRU策略、线程安全
+
+  ```java
+  public interface CacheService {
+      //存方法
+      void setCommonCache(String key,Object value);
+  
+      //取方法
+      Object getFromCommonCache(String key);
+  }
+  ```
+
+  ```java
+  package com.imooc.miaoshaproject.service.impl;
+  
+  import com.google.common.cache.Cache;
+  import com.google.common.cache.CacheBuilder;
+  import com.imooc.miaoshaproject.service.CacheService;
+  import org.springframework.stereotype.Service;
+  
+  import javax.annotation.PostConstruct;
+  import java.util.concurrent.TimeUnit;
+  
+  /**
+   * Created by hzllb on 2019/2/16.
+   */
+  @Service
+  public class CacheServiceImpl implements CacheService {
+  
+      private Cache<String,Object> commonCache = null;
+  
+      @PostConstruct
+      public void init(){
+          commonCache = CacheBuilder.newBuilder()
+                  //设置缓存容器的初始容量为10
+                  .initialCapacity(10)
+                  //设置缓存中最大可以存储100个KEY,超过100个之后会按照LRU的策略移除缓存项
+                  .maximumSize(100)
+                  //设置写缓存后多少秒过期
+                  .expireAfterWrite(60, TimeUnit.SECONDS).build();
+      }
+  
+      @Override
+      public void setCommonCache(String key, Object value) {
+              commonCache.put(key,value);
+      }
+  
+      @Override
+      public Object getFromCommonCache(String key) {
+          return commonCache.getIfPresent(key);
+      }
+  }
+  ```
+
++ nginx proxy cache：依靠文件系统存放索引的文件(将请求的结果缓存，下次相同的请求直接寻找缓存)、依靠内存缓存文件地址（key在内存，value在文件系统）
+
 + openResty支持nginx先访问只读salve Redis，如果redis中没有再访问服务端（而服务端又可以将数据缓存到master Redis中，有master负责将数据同步的slave Redis中）
 
 #### 页面静态化
@@ -436,11 +527,11 @@ server.tomcat.accesslog.pattern=%h %l %u %t "%r" %s %b %D
 
 + 服务设置cache-control
 
-  ![cache-control](image\cache-control.png)
+  ![cache-control](..\image\cache-control.png)
 
 + 客户端请求资源
 
-![客户端请求资源](image\客户端请求资源.png)
+![客户端请求资源](..\image\客户端请求资源.png)
 
 + 浏览器刷新方式
 
@@ -472,17 +563,101 @@ HTTP总结（四）：Cache-Control https://zhuanlan.zhihu.com/p/57100556
 
 订单创建流程(8次与mysql交互)：校验用户（查询用户(**user_info**)、查询密码(**user_password**)）、校验商品（查询商品(**item**)、查询库存(**item_stock**)、查询活动信息(**promo**)）、下单减库存（更新库存(**item_stock**)——行锁）、订单入库（创建订单(**order_info**)——）、更改商品销量（更新销量(**item**)——行锁）
 
-![交易流程](image\交易流程.png)
+> createOrder( userId,itemId,amount,promoId)
+
+![交易流程](..\image\交易流程.png)
 
 + 用户校验——使用缓存：用户风控策略缓存模型化（判断用户是否存在、账号是否异常、最近异地登录、最近修改密码）
+
+  > 先从缓存中获取，如果没再查数据库，然后存入缓存
+
 + 活动校验——使用缓存：引入活动发布流程，模型缓存化，紧急下线（删除redis缓存）
-+ 库存扣减（行锁前提是item_id需要加索引，否则会锁表）：库存缓存化（设置定时任务在活动快要开始前将库存缓存到redis中）、库存异步同步到数据、库存数据库最终一致性保证
+
++ 库存扣减（行锁前提是item_id需要加索引，否则会锁表）：库存缓存化（设置定时任务在活动快要开始前将库存缓存到redis中）、**库存异步同步到数据**、库存数据库最终一致性保证
+
+  > update item_stock set stock = stock - #{amount} where item_id = #{itemId} and stock >= #{amount}
+
+  + 活动发布时将数据库中的库存数量同步到redis中（或者定时任务活动快开始时发布活动），在这短暂的同步期间可能用户会购买商品，一般会采取活动开始前下架，活动开始后才上架
+
+  + 减库存：直接减redis中的库存，生产者异步发送消息(itemId+amount)通知消费者扣减数据库的库存
+
+    ```java
+    @Transactional
+    public void createOrder(){
+        //校验用户、商品、活动
+        decreaseStock();
+        //创建订单
+        //增加商品销量
+    }
+    
+    @Transactional
+    public coid decreaseStock(){
+        //1.减redis库存
+        //2.发送异步消息
+    }
+    ```
+    
+    ```
+    异步消息发送失败？判断是否成功，如果失败直接把redis库存加回来
+    扣减操作执行失败？ 消息消费时扣减数据库库存失败
+    下单失败无法正确回补库存？ 用户取消库存(或创建订单失败)导致整个事务回滚，虽然不会超卖，但会少买（redis已减库存并且消息已经被消费）——分布式事务
+    ```
+
+#### 交易优化
+
++ 异步发送消息最后进行（但即使这样也需要最后方法执行完事务才会commit，但可能由于网络、磁盘等原因可能会导致事务提交失败，那么还是会造成少买（库存已经被扣除了））
+
+  ```java
+  @Transactional
+  public void createOrder(){
+      //校验用户、商品、活动
+      decreaseStock();
+      //创建订单
+      
+      //增加商品销量
+      
+      //异步发送消息，若失败把redis库存加回来
+  }
+  
+  @Transactional
+  public coid decreaseStock(){
+      //1.减redis库存
+  }
+  ```
+
++ 利用Spring的TransactionSynchronizedManager等事务提交后在发送消息：一旦等事务提交后，即使消息发送失败也无法回滚，没办法回滚库存（afterCommit禁止把库存加回来)
+
+  ```java
+  @Transactional
+  public void createOrder(){
+      //校验用户、商品、活动
+      decreaseStock();
+      //创建订单
+      
+      //增加商品销量
+      
+      
+      TransactionSynchronizedManager.registerSynchronization(new TransactionSynchronization{
+      @Override
+      public void afterCommit(){
+          //异步发送消息
+      }
+      })
+      
+  }
+  @Transactional
+  public coid decreaseStock(){
+      //1.减redis库存
+  }
+  ```
+
+  
 
 
 
 RocketMQ
 
-![RocketMQ](image\RocketMQ.png)
+![RocketMQ](..\image\RocketMQ.png)
 
 > unzip rocketmq-all-4.7.1-source-release.zip
 
@@ -645,29 +820,152 @@ public OrderVo asynCreateOrder(Integer userId, Integer itemId, Integer amount, I
 
   宁可超卖，不能少买
 
-+ 下单前直接先添加库存流水：由于库存数量有限，在真正查看库存前就会生成大量库存流水，而后面库存售罄，导致可能到后面许多库存流水是无效的
++ 下单前直接先添加库存流水：由于库存数量有限，在真正查看库存前就会生成大量库存流水，而后面库存售罄，导致可能到后面许多库存流水是无效的添
 
-  添加库存售罄标识，先判断库存是否售罄，如果售罄直接返回并通知各系统售罄（告诉其他系统缓存的内容失效），后面什么操作都不做；如果有回补上新，则需要把售罄标识去除
++ 加库存售罄标识，下单先判断库存是否售罄，如果售罄直接返回并通知各系统售罄（告诉其他系统缓存的内容失效），后面什么操作都不做；如果有回补上新，则需要把售罄标识去除，在扣减redis库存时如果失败就把库存流水售罄标识存入reids中
+
+  ```
+  //校验用户、商品、活动
+  //校验库存是否售罄
+  //初始化库存流水
+  //减库存
+  //创建订单
+  //增加商品销量  //高并发多个线程抢同一行锁
+  //异步发送消息
+  ```
+  
+  
 
 #### 流量削峰
 
-秒杀下单接口会被脚本刷；秒杀验证逻辑和秒杀下单接口强关联，耦合度高
-
-第一秒大流量涌入，将第一秒的流量高峰削平
+秒杀下单接口会被脚本刷；秒杀验证逻辑和秒杀下单接口强关联，耦合度高第一秒大流量涌入，将第一秒的流量高峰削平
 
 ###### 秒杀令牌
 
 秒杀接口需要依靠令牌才能进入，令牌是有秒杀活动模块负责生成的（与交易系统无关），秒杀活动模块对秒杀令牌只做校验；令牌的生成、消亡有活动模块全权负责
 
++ 分离校验与交易：前端点击下单要先获取令牌，获取令牌成功在调用创建订单接口（活动未开始是无法获取skillToken）
+
+```java
+public void skillToken(promoId,userId,itemId){
+    //校验用户
+    //校验item
+    //校验活动是否存在
+    //校验商品是否已经开始
+    //生成秒杀令牌
+    //将令牌存入redis，(key:userid_itemid_promoid)
+}
+
+public void createOrder(promoId,userId,itemId,skillToken){
+    //校验skiiToken是否合法
+    
+    //校验库存是否售罄
+    
+    //初始化库存流水
+    
+    //减库存
+    
+    //创建订单
+    
+    //增加商品销量  (高并发多个线程抢同一行锁)
+    
+    //异步发送消息
+}
+```
+
++ 缺陷：只要活动一开始，就可以无限生成
+
 ###### 秒杀大闸
 
 根据商品初始库存颁发对应数量令牌（但在多库存情况下，令牌限制后的剩下流量还是很大）；将用户验证、库存售罄前置到令牌发放前
+
++ 在发布活动的时候同时将大闸限制数存入redis：大闸数=库存数*5；每次生成令牌将大闸数减-1
+
+  ```java
+  public void skillToken(promoId,userId,itemId){
+  	//校验库存是否有已经售罄
+      //校验用户
+      //校验item
+      //校验活动是否存在
+      //校验商品是否已经开始
+      //校验大闸数量是否还有
+      //生成秒杀令牌
+      //将令牌存入redis，(key:userid_itemid_promoid)
+  }
+  ```
+
+  ```java
+  public void createOrder(promoId,userId,itemId,skillToken){
+      //校验skiiToken是否合法
+  
+      //初始化库存流水
+      
+      //减库存
+      
+      //创建订单
+      
+      //增加商品销量  (高并发多个线程抢同一行锁)
+      
+      //异步发送消息
+  }
+  ```
+
+浪涌流量无法应对(如果商品库存一开就很多，那么令牌也会生成很多)
 
 ###### 队列泄洪
 
 排队有时比并发更高效,并发高时锁竞争是十分消耗的CPU上下文切换的（例如redis单线程 innodb mutex key）；依靠排队去限制并发流量，依靠排队和下游拥塞窗口程度调整队列释放流量的大小（一次从队列取多个，即拥塞窗口大小）
 
 + 将队列维护在本地（使用线程池）
+
+  ```java
+  private ExecutorService executorService;
+  
+  @PostConstruct
+  public void init(){
+      executorService = Executors.newFixedThreadPool(20);
+  }
+  
+  //封装下单请求
+  public createOrder(itemId, amount,promoId,promoToken) throws BusinessException {
+      //限流       
+      if(!orderCreateRateLimiter.tryAcquire()){
+              throw new Execption
+          }
+  
+          //校验用户是否登录
+      
+          //校验秒杀令牌是否正确
+  
+  
+          //同步调用线程池的submit方法
+          //拥塞窗口为20的等待队列，用来队列化泄洪
+          Future<Object> future = executorService.submit(new Callable<Object>() {
+              @Override
+              public Object call() throws Exception {
+                  //初始化库存流水
+                  //减库存
+                  //创建订单
+                  //增加商品销量  (高并发多个线程抢同一行锁)
+                  //异步发送消息
+                  return null;
+              }
+          });
+  
+          try {
+              future.get();
+          } catch (InterruptedException e) {
+              throw new BusinessException(EmBusinessError.UNKNOWN_ERROR);
+          } catch (ExecutionException e) {
+              throw new BusinessException(EmBusinessError.UNKNOWN_ERROR);
+          }
+  
+          return CommonReturnType.create(null);
+      }
+  ```
+
+  
+
 + 分布式：将队列设置到redis中
 
 使用分布式队列，当出现问题时降级到本地队列
@@ -681,7 +979,17 @@ public OrderVo asynCreateOrder(Integer userId, Integer itemId, Integer amount, I
 ###### 限流
 
 + 限并发：在controller层面入口处添加计数器，限制访问数量，出口处把计数器重置 （不推荐）
-+ 令牌桶算法：限TPS，每次只允许一定数量的请求真正执行业务操作，
++ 令牌桶算法：限TPS，每次只允许一定数量的请求真正执行业务操作
+
+```java
+private RateLimiter orderCreateRateLimiter;
+
+@PostConstruct
+public void init(){
+    orderCreateRateLimiter = RateLimiter.create(300);
+}
+```
+
 + 漏桶算法
 
 
@@ -689,3 +997,39 @@ public OrderVo asynCreateOrder(Integer userId, Integer itemId, Integer amount, I
 
 
 当消息队列宕机如何降级，或者某一环节宕掉，如何降级，保证系统还是可运行的呢？
+
+
+
+
+
+发布活动：缓存库存、缓存大闸、
+
+下单：
+
++ 获取校验码
+
++ 获取秒杀令牌，每次生成令牌的时候大闸数减一(校验用户、商品、活动)
+
++ 限流
+
++ 校验秒杀令牌
+
++ 线程执行：
+
+  ```java
+  //初始化库存流水
+  //减库存
+  //创建订单
+  //增加商品销量  (高并发多个线程抢同一行锁)
+  //异步发送消息
+  ```
+
+```java
+long result = redisTemplate.opsForValue().increment("item_stock",amount.intValue() * -1);
+if(result >0){
+     //更新库存成功
+}else if(result == 0){
+    //打上库存已售罄的标识
+}       
+```
+

@@ -36,7 +36,7 @@ TCP传给IP的数据单元称作 TCP报文段或简称为TCP段（TCP segment）
 
 传输层中的TCP和UDP都用一个16bit的端口号来标识不同的应用程序，TCP和UDP把源端口号和目的端口号分别存入报文首部中。网络层中IP首部用8bit的协议域标识数据属于哪一层(1代表ICMP、2代表IGMP、6代表TCP、17代表UDP)。网络接口层中以太网帧首部用16bit的帧类型域指明生成数据的网络层协议
 
-![TCP-IP数据封装](image\TCP-IP数据封装.png)
+![TCP-IP数据封装](..\image\TCP-IP数据封装.png)
 
 #### 分用(数据解封)
 
@@ -44,7 +44,7 @@ TCP传给IP的数据单元称作 TCP报文段或简称为TCP段（TCP segment）
 层协议加上的报文首部。每层协议盒都要去检查报文首部中的协议标识，以确定接收数据的
 上层协议。这个过程称作分用（Demultiplexing）
 
-![TCP-IP分用](image\TCP-IP分用.png)
+![TCP-IP分用](..\image\TCP-IP分用.png)
 
 
 
@@ -64,7 +64,7 @@ TCP传给IP的数据单元称作 TCP报文段或简称为TCP段（TCP segment）
 
 ARP和RARP协议就是负责对32bit的IP地址和48bit的硬件地址进行映射。
 
-![TCP-IP以太网封装](image\TCP-IP以太网封装.png)
+![TCP-IP以太网封装](..\image\TCP-IP以太网封装.png)
 
 + SLIP(Serial Line IP)是一种在串行线路上对IP数据报进行封装的简单形式
 

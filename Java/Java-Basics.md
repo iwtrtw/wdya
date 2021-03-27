@@ -24,7 +24,7 @@
 + 字符型：char(2个字节)
 + 布尔型：boolean
 
-![java基本数据类型](image\java基本数据类型.png)
+![java基本数据类型](..\image\java基本数据类型.png)
 
 在 Java 语言中，布尔类型的值不能转换成任何数据类型，true 常量不等于 1，而 false 常量也不等于 0。这两个值只能赋给声明为 boolean 类型的变量，或者用于布尔运算表达式中。java对于-128到127之间的数，会进行缓存，Integer i = 100 在编译时，会成为Integer i = Integer.valueOf(100)，会从缓存中寻找数据；int 变量 与 Integer、 new Integer() 比较时，只要两个的值是相等，则为true,包装类Integer 和 基本数据类型int 比较时，java会自动拆包装为int ，然后进行比较，实际上就变为两个int变量的比较。
 
@@ -42,9 +42,9 @@ public static Integer valueOf(int i){
 
 ##### 封装/继承/多态
 
-+ 封装：将类的属性、方法等实现细节隐藏在类内部，仅对外提供部分允许访问的方法，使用者不必了解具体的实现细节。这样可以提高数据安全性，防止数据被恶意破坏。通常是将成员变量访问修饰设为private,并提供公有的setter和getter方法。
++ 封装：将类的属性、方法等实现细节隐藏在类内部，仅对外提供部分允许访问的方法，使用者不必了解具体的实现细节。这样可以提高数据安全性，防止数据被恶意破坏。通常是将成员变量访问修饰设为private,并提供公有的setter和getter方法
 
-+ 继承：子类继承父类的特征和行为，使得子类具有父类的一些属性和方法。在继承关系中，父类更通用、子类更具体。父类具有更一般的特征和行为，而子类除了具有父类的特征和行为，还具有一些自己特殊的特征和行为。这样可以实现代码重用(非静态属性和方法可以被继承和重写。但是静态属性和方法可以被继承，但是没有被重写(overwrite)而是被隐藏，即调用的都是父类的属性和方法；创建子类对象时默认会先调用父类无参的构造函数。)
++ 继承：子类继承父类的特征和行为，使得子类具有父类的一些属性和方法。在继承关系中，父类更通用、子类更具体。父类具有更一般的特征和行为，而子类除了具有父类的特征和行为，还具有一些自己特殊的特征和行为。这样可以实现代码重用(非静态属性和方法可以被继承和重写。但是静态属性和方法可以被继承，但是没有被重写(overwrite)而是被隐藏，即调用的都是父类的属性和方法；创建子类对象时默认会先调用父类无参的构造函数。
 
   + 普通类可以继承（extends）普通类，可以继承（extends）抽象类，可以继承（implements）接口。
   + 抽象类可以继承（extends）普通类，可以继承（extends）抽象类，可以继承（implements）接口。
@@ -101,8 +101,30 @@ private 只能用于修饰内部类
 在 Java 应用程序中，异常处理机制为：抛出异常throws，捕捉异常try-catch-finally。
 
 + throws：方法可能抛出异常的声明。在方法声明处用throws子句来声明抛出异常。throws 可以理解成是一种通知行为，没有实际的抛出异常的动作，而仅仅是告诉调用他的上层函数，这里可能会抛出这个异常。当方法抛出异常时，方法将不对这些类型及其子类类型的异常作处理，而抛向调用该方法的方法，由他去处理，而是推卸责任
+
 + throw：明确抛出一个异常。throw总是出现在函数体中，用来抛出一个Throwable类型的异常。表示抛出一个实际的异常的实际动作，如果在函数内没有捕获并处理，那么将会一直向上抛出这个异常直到被main()/Thread.run()抛出。
-+ finally：异常机制总是保证finally块总是被执行。只有finally块，执行完成之后，才会回来执行try或者catch块中的return或者throw语句，如果finally中使用了return或者   throw等终止方法的语句，则就不会跳回执行，直接停止。finally块中永远不要写return语句，因为finally块中总是最后执行，他会改变预期在try和catch块中的返回值（举个例子，你在catch中捕获了一个异常并抛出e，又在finally语句中return true,这样你抛出的异常就"消失"了，因为当前函数的执行结果已经从抛出异常 转变成 return true）。另外，在使用资源对象与流对象时，finally块必须对资源对象、流对象进行关闭。
+
++ finally：异常机制总是保证finally块总是被执行。只有finally块，执行完成之后，才会回来执行try或者catch块中的return或者throw语句，如果finally中使用了return或者  throw等终止方法的语句，则就不会跳回执行，直接停止。finally块中永远不要写return语句，因为finally块中总是最后执行，他会改变预期在try和catch块中的返回值（举个例子，你在catch中捕获了一个异常并抛出e，又在finally语句中return true,这样你抛出的异常就"消失"了，因为当前函数的执行结果已经从抛出异常 转变成 return true）。另外，在使用资源对象与流对象时，finally块必须对资源对象、流对象进行关闭。
+
+  + 在finally中将异常捕获，catch中throw的异常将不会被执行
+
+  ```java
+  public static void main(String[] args) throws Exception {
+      List<Integer> list = new ArrayList<>(6);
+      try {
+          list.add(7,1);
+      } catch (Exception e) {
+          System.out.println("-CATCH-");
+          throw  new Exception("Catch");
+      } finally {
+          System.out.println("-FINALLY-");
+          return ;
+      }
+  }
+  -----------------------
+  -CATCH-
+  -FINALLY-
+  ```
 
 RuntimeException子类
 
@@ -110,7 +132,8 @@ RuntimeException子类
 1.java.lang.ArrayIndexOutOfBoundsException:数组索引越界异常。当对数组的索引值为负数或大于等于数组大小时抛出。
 2.java.lang.NullPointerException:空指针异常。当应用试图在要求使用对象的地方使用了null时，抛出该异常。譬如：调用null对象的实例方法、访问null对象的属性、计算null对象的长度、使用throw语句抛出null等等
 3.java.lang.ArithmeticException:算术条件异常。譬如：整数除零等。
-4.java.lang.ClassNotFoundException:找不到类异常。当应用试图根据字符串形式的类名构造类，而在遍历CLASSPAH之后找不到对应名称的class文件时，抛出该异常。
+4.java.lang.ClassCastException:强类型转换异常,当试图将对象强制转换为不是实例的子类时，抛出该异常。
+5.java.lang.SecurityException - 安全异常
 ```
 
 IOException
@@ -123,9 +146,9 @@ IOException
 
 用户自定义异常类，只需继承Exception类即可
 
-1. 创建自定义异常类：一般会选择继承Exception和RuntimeException，如果不要求调用者一定要处理抛出的异常，就继承RuntimeException。
-2. 抛出自定义异常：在方法中通过throw关键字抛出异常对象。
-3. 捕获自定义异常：如果在当前抛出异常的方法中处理异常，可以使用try-catch语句捕获并处理；否则在方法的声明处通过throws关键字指明要抛出给方法调用者的异常，继续进行下一步操作。
+1. 创建自定义异常类：一般会选择继承Exception和RuntimeException，如果不要求调用者一定要处理抛出的异常，就继承RuntimeException
+2. 抛出自定义异常：在方法中通过throw关键字抛出异常对象
+3. 捕获自定义异常：如果在当前抛出异常的方法中处理异常，可以使用try-catch语句捕获并处理；否则在方法的声明处通过throws关键字指明要抛出给方法调用者的异常，继续进行下一步操作
 
 ##### 泛型-TODO
 
@@ -176,7 +199,7 @@ String 类不可变，内部维护的char[] 数组长度不可变，为final修�
 
 StringBuilder 类内部维护可变长度char[] ， 初始化数组容量为16，存在扩容， 其append拼接字符串方法内部调用System的native方法，进行数组的拷贝，不会重新生成新的StringBuilder对象。非线程安全的字符串操作类， 其每次调用 toString方法而重新生成的String对象，不会共享StringBuilder对象内部的char[]，会进行一次char[]的copy操作。
 
-StringBuffer 类内部维护可变长度char[]， 基本上与StringBuilder一致，但其为线程安全的字符串操作类，大部分方法都采用了Synchronized关键字修改，以此来实现在多线程下的操作字符串的安全性。其toString方法而重新生成的String对象，会共享StringBuffer对象中的toStringCache属性（char[]），但是每次的StringBuffer对象修改，都会置null该属性值。
+StringBuffer 类内部维护可变长度char[]， 基本上与StringBuilder一致，但其为线程安全的字符串操作类，大部分方法都采用了Synchronized关键字修改，以此来实现在多线程下的操作字符串的安全性。其toString方法而重新生成的String对象，会共享StringBuffer对象中的toStringCache属性（char[]），但是每次的StringBuffer对象修改，都会置null该属性值
 
 ##### 反射机制
 
@@ -1087,9 +1110,9 @@ public interface SortedSet<E> extends Set<E>
 
 ###### ArrayList
 
-ArrayList底层采用数组实现，拥有快速随机访问能力，是非线程安全的集合。ArrayList默认容量为10，扩容规则为当要保存的新元素所需的容量不足时触发，基本规则为扩容1.5倍。如果在遍历的时候发生结构性变化，导致modcount改变，会触发ConcurrentModificationException异常。结构性变化包括：添加新元素，删除元素。ArrayList支持序列化功能，支持克隆（浅拷贝）功能，排序功能等。ArrayList比较适合顺序添加、随机访问的场景。
+ArrayList底层采用数组实现，拥有快速随机访问能力，是非线程安全的集合。ArrayList默认容量为10，扩容规则为当要保存的新元素所需的容量不足时触发，基本规则为扩容1.5倍。如果在遍历的时候发生结构性变化，导致modcount改变，会触发ConcurrentModificationException异常。结构性变化包括：添加新元素，删除元素。ArrayList支持序列化功能，支持克隆（浅拷贝）功能，排序功能等。ArrayList比较适合顺序添加、随机访问的场景
 
-可变长度数组的原理：当元素个数超过数组的长度时，会产生一个新的数组，将原数组的数据复制到新数组，再将新的元素添加到新数组中。
+可变长度数组的原理：当元素个数超过数组的长度时，会产生一个新的数组，将原数组的数据复制到新数组，再将新的元素添加到新数组中
 
 ```java
 public abstract class AbstractList<E> extends AbstractCollection<E> implements List<E>
